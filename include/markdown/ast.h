@@ -1,6 +1,7 @@
 #ifndef MARKDOWN_AST_H
 #define MARKDOWN_AST_H
 
+#include "export.h"
 #include <stddef.h>
 
 typedef enum md_node_type {
@@ -108,7 +109,7 @@ typedef struct {
     md_node_t *link_refs;
 } md_document_t;
 
-int md_node_add_child(md_node_t *parent, md_node_t *child);
-void md_node_free(md_node_t *node);
+MARKDOWN_API int md_node_add_child(md_node_t *parent, md_node_t *child);
+MARKDOWN_API void md_node_free(md_node_t *node);
 
 #endif

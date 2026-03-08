@@ -1022,22 +1022,23 @@ TEST(document_get_source) {
     tests_passed++;
 }
 
+static int test_visit_callback(const md_node_t *node, void *data) {
+    (void)node;
+    int *count = (int *)data;
+    (*count)++;
+    return 0;
+}
+
 TEST(document_visit) {
     md_document_t *doc = md_parse("# H1\n\n# H2", 11);
     
     int visit_count = 0;
-    int callback(const md_node_t *node, void *data) {
-        (void)node;
-        (void)data;
-        visit_count++;
-        return 0;
-    }
     
-    int ret = md_document_visit(doc, callback, NULL);
+    int ret = md_document_visit(doc, test_visit_callback, &visit_count);
     ASSERT_EQ_INT(0, ret, "visit returns 0");
     ASSERT(visit_count > 0, "visited nodes");
     
-    ret = md_document_visit(NULL, callback, NULL);
+    ret = md_document_visit(NULL, test_visit_callback, NULL);
     ASSERT_EQ_INT(-1, ret, "visit NULL doc");
     
     ret = md_document_visit(doc, NULL, NULL);
@@ -1048,18 +1049,18 @@ TEST(document_visit) {
     tests_passed++;
 }
 
+static int test_visit_early_exit_callback(const md_node_t *node, void *data) {
+    (void)node;
+    int *c = (int *)data;
+    (*c)++;
+    return *c >= 2 ? 1 : 0;
+}
+
 TEST(document_visit_early_exit) {
     md_document_t *doc = md_parse("# H1\n\n# H2\n\n# H3", 23);
     
-    int callback(const md_node_t *node, void *data) {
-        (void)node;
-        int *c = (int *)data;
-        (*c)++;
-        return *c >= 2 ? 1 : 0;
-    }
-    
     int c = 0;
-    int ret = md_document_visit(doc, callback, &c);
+    int ret = md_document_visit(doc, test_visit_early_exit_callback, &c);
     ASSERT_EQ_INT(1, ret, "visit returns early exit");
     
     md_document_free(doc);

@@ -14,6 +14,8 @@ A C library for parsing and analyzing Markdown documents, built on CommonMark 0.
 - **Comprehensive error handling** - Detailed error messages with line/column info
 - **Code coverage** - Built-in coverage testing support
 - **Modular design** - Separate parser, iterator, extractor modules
+- **Cross-platform** - Works on Linux, macOS, Windows (DLL support)
+- **170+ tests** - Comprehensive test suite with 100% pass rate
 
 ## Quick Start
 
@@ -38,6 +40,7 @@ int main() {
 
 ## Build
 
+### Linux / Unix
 ```bash
 # Compile the library
 make
@@ -52,37 +55,74 @@ make coverage
 ./bin/test
 ```
 
+### Windows (VC++ DLL)
+
+**Prerequisites:** Install Visual Studio 2022 or later
+
+```bash
+# Method 1: Using CMake (Recommended)
+# Run from Visual Studio Developer Command Prompt
+build_cmake.bat
+
+# Method 2: Using MSBuild directly
+# Run from Visual Studio Developer Command Prompt
+build_msbuild.bat
+
+# Run test program (170 tests)
+# Run from Visual Studio Developer Command Prompt
+run_example.bat
+```
+
+### CMake (Cross-platform)
+```bash
+mkdir build && cd build
+cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_TESTS=ON
+cmake --build . --config Release
+```
+
 ## Project Structure
 
 ```
 libmarkdown/
-├── include/markdown/    # Header files
-│   ├── markdown.h      # Main header
-│   ├── ast.h           # AST node definitions
-│   ├── iterator.h      # Iterator API
-│   ├── parser.h        # Parser API
-│   ├── document.h      # Document operations
-│   ├── extractor.h     # Content extraction
-│   └── error.h         # Error handling
-├── src/                # Source code
-│   ├── parser.c        # Parser implementation
-│   ├── parser_debug.c  # Parser debugging tools
-│   ├── ast.c           # AST operations
-│   ├── iterator.c      # Iterator implementation
-│   ├── document.c      # Document API
-│   ├── extractor.c     # Content extraction
-│   └── error.c         # Error handling
-├── tests/              # Test cases
-│   ├── test.c          # Test suite
-│   └── sample.md       # Test document
-├── doc/                # Documentation
-│   ├── design.md       # Design documentation
-│   └── prompt.md       # Development prompts
-├── bin/                # Build output
-│   ├── libmarkdown.a   # Static library
-│   └── test            # Test program
-├── test_*.c            # Example test programs
-└── Makefile
+├── include/markdown/          # Header files
+│   ├── markdown.h            # Main header
+│   ├── ast.h                 # AST node definitions
+│   ├── iterator.h            # Iterator API
+│   ├── parser.h              # Parser API
+│   ├── document.h            # Document operations
+│   ├── extractor.h           # Content extraction
+│   ├── error.h               # Error handling
+│   └── export.h              # Windows DLL export macros
+├── src/                      # Source code
+│   ├── parser.c              # Parser implementation
+│   ├── ast.c                 # AST operations
+│   ├── iterator.c            # Iterator implementation
+│   ├── document.c            # Document API
+│   ├── extractor.c           # Content extraction
+│   └── error.c               # Error handling
+├── tests/                    # Test cases
+│   ├── test.c                # Test suite (170+ tests)
+│   └── sample.md             # Test document
+├── examples/                 # Example programs
+│   └── example.c             # Simple usage example
+├── doc/                      # Documentation
+│   ├── design.md             # Design documentation
+│   └── prompt.md             # Development prompts
+├── cmake/                    # CMake configuration
+│   └── markdown-config.cmake.in
+├── bin/                      # Build output directory
+│   └── Release/
+│       ├── markdown.dll      # Windows DLL
+│       ├── markdown.lib      # Import library
+│       ├── markdown.exp      # Export file
+│       ├── test_markdown.exe # Test program (170 tests)
+│       └── examples/
+│           └── example.exe        # Example program
+├── CMakeLists.txt           # CMake configuration
+├── Makefile                 # Linux Makefile
+├── build_cmake.bat        # Windows CMake build script
+├── build_msbuild.bat      # Windows MSBuild build script
+└── run_example.bat        # Run test example
 ```
 
 ## Usage
@@ -120,8 +160,18 @@ md_code_blocks_free(codes, count);
 
 ### Compile Your Program
 
+#### Linux / Unix
 ```bash
 gcc -o myapp myapp.c -I include -L bin -lmarkdown -std=c11
+```
+
+#### Windows (VC++ DLL)
+```c
+#include <markdown/markdown.h>
+```
+```bash
+cl /DMARKDOWN_DLL /Iinclude myapp.c markdown.lib
+# Ensure markdown.dll is in the same directory as your executable
 ```
 
 ## API Reference

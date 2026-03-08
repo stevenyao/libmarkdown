@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+if(NOT TARGET markdown)
+    include("${CMAKE_CURRENT_LIST_DIR}/markdown-targets.cmake")
+endif()
+
+check_required_components(markdown)

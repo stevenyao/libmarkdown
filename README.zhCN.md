@@ -12,6 +12,8 @@
 - **完善的错误处理** - 带行号/列号的详细错误信息
 - **代码覆盖率** - 内置覆盖率测试支持
 - **模块化设计** - 分离的解析器、迭代器、抽取器模块
+- **跨平台支持** - 支持 Linux、macOS、Windows（DLL 支持）
+- **170+ 测试** - 完整的测试套件，通过率 100%
 
 ## 快速开始
 
@@ -36,6 +38,7 @@ int main() {
 
 ## 编译
 
+### Linux / Unix
 ```bash
 # 编译静态库
 make
@@ -50,19 +53,74 @@ make coverage
 ./bin/test
 ```
 
+### Windows (VC++ DLL)
+
+**前提条件:** 安装 Visual Studio 2022 或更高版本
+
+```bash
+# 方法一：使用 CMake（推荐）
+# 从 Visual Studio Developer Command Prompt 运行
+build_cmake.bat
+
+# 方法二：使用 MSBuild 直接编译
+# 从 Visual Studio Developer Command Prompt 运行
+build_msbuild.bat
+
+# 运行测试程序（170 个测试）
+# 从 Visual Studio Developer Command Prompt 运行
+run_example.bat
+```
+
+### CMake（跨平台）
+```bash
+mkdir build && cd build
+cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_TESTS=ON
+cmake --build . --config Release
+```
+
 ## 项目结构
 
 ```
 libmarkdown/
-├── include/markdown/    # 头文件
-│   └── markdown.h      # 主头文件
-├── src/                # 源代码
-├── tests/              # 测试用例
-├── doc/                # 设计文档
-├── bin/                # 编译输出
-│   ├── libmarkdown.a  # 静态库
-│   └── test          # 测试程序
-└── Makefile
+├── include/markdown/          # 头文件
+│   ├── markdown.h            # 主头文件
+│   ├── ast.h                 # AST 节点定义
+│   ├── iterator.h            # 迭代器 API
+│   ├── parser.h              # 解析器 API
+│   ├── document.h            # 文档操作
+│   ├── extractor.h           # 内容抽取
+│   ├── error.h               # 错误处理
+│   └── export.h              # Windows DLL 导出宏
+├── src/                      # 源代码
+│   ├── parser.c              # 解析器实现
+│   ├── ast.c                 # AST 操作
+│   ├── iterator.c            # 迭代器实现
+│   ├── document.c            # 文档 API
+│   ├── extractor.c           # 内容抽取
+│   └── error.c               # 错误处理
+├── tests/                    # 测试用例
+│   ├── test.c                # 测试套件（170+ 测试）
+│   └── sample.md             # 测试文档
+├── examples/                 # 示例程序
+│   └── example.c             # 简单使用示例
+├── doc/                      # 设计文档
+│   ├── design.md             # 设计文档
+│   └── prompt.md             # 开发提示
+├── cmake/                    # CMake 配置
+│   └── markdown-config.cmake.in
+├── bin/                      # 编译输出目录
+│   └── Release/
+│       ├── markdown.dll      # Windows DLL
+│       ├── markdown.lib      # 导入库
+│       ├── markdown.exp      # 导出文件
+│       ├── test_markdown.exe # 测试程序（170 个测试）
+│       └── examples/
+│           └── example.exe        # 示例程序
+├── CMakeLists.txt           # CMake 配置文件
+├── Makefile                 # Linux Makefile
+├── build_cmake.bat        # Windows CMake 构建脚本
+├── build_msbuild.bat      # Windows MSBuild 构建脚本
+└── run_example.bat        # 运行测试示例
 ```
 
 ## 使用方法
@@ -100,8 +158,18 @@ md_code_blocks_free(codes, count);
 
 ### 编译你的程序
 
+#### Linux / Unix
 ```bash
-gcc -o myapp myapp.c -I include -L bin -lmarkdown
+gcc -o myapp myapp.c -I include -L bin -lmarkdown -std=c11
+```
+
+#### Windows (VC++ DLL)
+```c
+#include <markdown/markdown.h>
+```
+```bash
+cl /DMARKDOWN_DLL /Iinclude myapp.c markdown.lib
+# 确保 markdown.dll 与可执行文件在同一目录
 ```
 
 ## API 参考
@@ -119,13 +187,19 @@ gcc -o myapp myapp.c -I include -L bin -lmarkdown
 - 水平线
 - HTML 块
 - 段落
+- 链接引用定义
+- YAML 前置元数据
 
 **行内元素：**
-- 强调（粗体/斜体）
+- 强调（斜体、粗体、粗斜体）
 - 行内代码
 - 链接 / 图片
-- 换行
+- 硬换行 / 软换行
 - 删除线 (GFM)
+- 自动链接（URL/邮箱）
+- 行内 HTML
+- 脚注
+- 标记 / 下标 / 上标
 
 ## 许可证
 

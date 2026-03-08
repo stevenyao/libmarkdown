@@ -1,6 +1,8 @@
 #ifndef MARKDOWN_ERROR_H
 #define MARKDOWN_ERROR_H
 
+#include "export.h"
+
 typedef enum {
     MD_ERROR_NONE = 0,
     MD_ERROR_MEMORY,
@@ -12,7 +14,7 @@ typedef enum {
     MD_ERROR_INTERNAL
 } md_error_t;
 
-const char *md_error_string(md_error_t error);
+MARKDOWN_API const char *md_error_string(md_error_t error);
 
 typedef struct {
     md_error_t error;
@@ -21,7 +23,7 @@ typedef struct {
     char message[256];
 } md_error_info_t;
 
-void md_error_init(md_error_info_t *err);
-void md_error_set(md_error_info_t *err, md_error_t error, int line, int column, const char *msg);
+MARKDOWN_API void md_error_init(md_error_info_t *err);
+MARKDOWN_API void md_error_set(md_error_info_t *err, md_error_t error, int line, int column, const char *msg);
 
 #endif

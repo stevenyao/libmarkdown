@@ -1,6 +1,7 @@
 #ifndef MARKDOWN_PARSER_H
 #define MARKDOWN_PARSER_H
 
+#include "export.h"
 #include "ast.h"
 #include "error.h"
 #include <stdio.h>
@@ -29,15 +30,15 @@ typedef struct md_parser_options {
 
 typedef struct md_parser md_parser_t;
 
-md_parser_t *md_parser_create(const md_parser_options_t *opts);
-void md_parser_destroy(md_parser_t *parser);
+MARKDOWN_API md_parser_t *md_parser_create(const md_parser_options_t *opts);
+MARKDOWN_API void md_parser_destroy(md_parser_t *parser);
 
-int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document_t **doc);
-int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_t **doc);
+MARKDOWN_API int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document_t **doc);
+MARKDOWN_API int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_t **doc);
 
-md_document_t *md_parse(const char *md, size_t len);
-md_document_t *md_parse_file(const char *filepath);
+MARKDOWN_API md_document_t *md_parse(const char *md, size_t len);
+MARKDOWN_API md_document_t *md_parse_file(const char *filepath);
 
-int md_parser_get_error(const md_parser_t *parser, md_error_info_t *err);
+MARKDOWN_API int md_parser_get_error(const md_parser_t *parser, md_error_info_t *err);
 
 #endif
