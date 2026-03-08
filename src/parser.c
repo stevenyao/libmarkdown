@@ -373,7 +373,7 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
             char *lang = NULL;
             char *info = line_copy + fence_len;
             while (*info == ' ' || *info == '\t') info++;
-            size_t info_len = line_len - fence_len - (info - line_copy);
+            size_t info_len = line_len - (info - line_copy);
             if (info_len > 0) {
                 lang = trim_string(info, info_len);
             }
@@ -443,7 +443,7 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                         }
                     }
                     
-                    size_t new_len = code_len + content_len + 1;
+                    size_t new_len = code_len + content_len + 2;
                     if (new_len > code_capacity) {
                         size_t new_capacity = code_capacity ? code_capacity * 2 : 256;
                         if (new_capacity < new_len) new_capacity = new_len;
@@ -480,6 +480,7 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 }
                 
                 if (code_content) {
+                    code_content[code_len] = '\0';
                     code->content = code_content;
                     code->content_len = code_len;
                 }

@@ -33,7 +33,7 @@ static int tests_failed = 0;
 
 #define ASSERT_EQ_STR(a, b, msg) do { \
     if (strcmp(a, b) != 0) { \
-        printf("FAILED: %s (got '%s', expected '%s')\n", msg, a, b); \
+        printf("FAILED: %s (got '%s'[%zu], expected '%s'[%zu])\n", msg, a, strlen(a), b, strlen(b)); \
         tests_failed++; \
         return; \
     } \
@@ -175,6 +175,19 @@ TEST(parser_parse_basic) {
     int ret = md_parser_parse(parser, md, strlen(md), &doc);
     ASSERT_EQ_INT(0, ret, "parse basic md");
     ASSERT(doc != NULL, "doc created");
+    
+    // Verify structure: Root -> Heading -> Paragraph
+    md_node_t *root = doc->root;
+    ASSERT(root != NULL, "root exists");
+    
+    md_node_t *heading = root->first_child;
+    ASSERT(heading != NULL, "heading exists");
+    ASSERT_EQ_INT(MD_NODE_HEADING, heading->type, "first child is heading");
+    ASSERT_EQ_INT(1, heading->data.block.heading_level, "heading level 1");
+    
+    md_node_t *para = heading->next;
+    ASSERT(para != NULL, "paragraph exists");
+    ASSERT_EQ_INT(MD_NODE_PARAGRAPH, para->type, "second child is paragraph");
     
     const char *src = md_document_get_source(doc);
     ASSERT(src != NULL, "source not NULL");
@@ -1092,8 +1105,16 @@ TEST(extractor_headings) {
     ASSERT_EQ_INT(3, count, "heading count");
     
     ASSERT_EQ_INT(1, headings[0].level, "H1 level");
-    ASSERT(headings[0].text != NULL, "H1 text not NULL");
-    ASSERT(headings[0].node != NULL, "H1 node not NULL");
+    ASSERT(headings[0].text != NULL, "H1 text exists");
+    ASSERT_EQ_STR("H1", headings[0].text, "H1 content match");
+    
+    ASSERT_EQ_INT(2, headings[1].level, "H2 level");
+    ASSERT(headings[1].text != NULL, "H2 text exists");
+    ASSERT_EQ_STR("H2", headings[1].text, "H2 content match");
+    
+    ASSERT_EQ_INT(3, headings[2].level, "H3 level");
+    ASSERT(headings[2].text != NULL, "H3 text exists");
+    ASSERT_EQ_STR("H3", headings[2].text, "H3 content match");
     
     md_headings_free(headings, count);
     md_document_free(doc);
@@ -1132,13 +1153,24 @@ TEST(extractor_headings_empty) {
 }
 
 TEST(extractor_code_blocks) {
-    md_document_t *doc = md_parse("```c\ncode\n```\n\n```python\npy\n```", 33);
+    const char *md = "```c\ncode\n```\n\n```python\npy\n```";
+    md_document_t *doc = md_parse(md, strlen(md));
     
     md_code_block_t *blocks = NULL;
     size_t count = 0;
     
     md_extract_code_blocks(doc, &blocks, &count);
     ASSERT_EQ_INT(2, count, "code block count");
+    
+    ASSERT(blocks[0].language != NULL, "first block lang exists");
+    ASSERT_EQ_STR("c", blocks[0].language, "first block lang");
+    ASSERT(blocks[0].code != NULL, "first block code exists");
+    ASSERT_EQ_STR("code", blocks[0].code, "first block code");
+    
+    ASSERT(blocks[1].language != NULL, "second block lang exists");
+    ASSERT_EQ_STR("python", blocks[1].language, "second block lang");
+    ASSERT(blocks[1].code != NULL, "second block code exists");
+    ASSERT_EQ_STR("py", blocks[1].code, "second block code");
     
     md_code_blocks_free(blocks, count);
     md_document_free(doc);
@@ -1181,6 +1213,11 @@ TEST(extractor_links) {
     
     md_extract_links(doc, &links, &count);
     ASSERT_EQ_INT(1, count, "link count");
+    
+    ASSERT(links[0].text != NULL, "link text exists");
+    ASSERT_EQ_STR("link", links[0].text, "link text match");
+    ASSERT(links[0].url != NULL, "link url exists");
+    ASSERT_EQ_STR("url", links[0].url, "link url match");
     
     md_links_free(links, count);
     md_document_free(doc);
@@ -1273,6 +1310,7 @@ TEST(extractor_plain_text) {
     
     char *text = md_extract_plain_text(doc);
     ASSERT(text != NULL, "plain text not NULL");
+    ASSERT_EQ_STR("Hello World", text, "plain text match");
     
     free(text);
     md_document_free(doc);
