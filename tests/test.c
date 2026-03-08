@@ -1180,6 +1180,7 @@ TEST(extractor_links) {
     size_t count = 0;
     
     md_extract_links(doc, &links, &count);
+    ASSERT_EQ_INT(1, count, "link count");
     
     md_links_free(links, count);
     md_document_free(doc);
@@ -1206,6 +1207,7 @@ TEST(extractor_links_multiple) {
     size_t count = 0;
     
     md_extract_links(doc, &links, &count);
+    ASSERT_EQ_INT(2, count, "multiple link count");
     md_links_free(links, count);
     md_document_free(doc);
     
@@ -1219,6 +1221,7 @@ TEST(extractor_images) {
     size_t count = 0;
     
     md_extract_images(doc, &images, &count);
+    ASSERT_EQ_INT(1, count, "image count");
     
     md_images_free(images, count);
     md_document_free(doc);

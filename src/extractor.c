@@ -6,6 +6,7 @@
 // Forward declarations
 static void measure_text_len(const md_node_t *node, size_t *len);
 static void copy_text_content(const md_node_t *node, char *buffer, size_t *pos);
+static char *extract_node_text(const md_node_t *node);
 
 static int collect_nodes(const md_node_t *node, md_node_type_t target_type, 
                         md_node_t ***results, size_t *count, size_t *capacity) {
@@ -57,7 +58,7 @@ int md_extract_headings(const md_document_t *doc, md_heading_t **headings, size_
     
     for (size_t i = 0; i < *count; i++) {
         (*headings)[i].level = nodes[i]->data.block.heading_level;
-        (*headings)[i].text = nodes[i]->content ? strdup(nodes[i]->content) : NULL;
+        (*headings)[i].text = extract_node_text(nodes[i]);
         (*headings)[i].node = nodes[i];
     }
     
@@ -147,7 +148,7 @@ int md_extract_links(const md_document_t *doc, md_link_t **links, size_t *count)
     }
     
     for (size_t i = 0; i < *count; i++) {
-        (*links)[i].text = nodes[i]->content ? strdup(nodes[i]->content) : NULL;
+        (*links)[i].text = extract_node_text(nodes[i]);
         (*links)[i].url = nodes[i]->data.inline_.url ? strdup(nodes[i]->data.inline_.url) : NULL;
         (*links)[i].title = nodes[i]->data.inline_.title ? strdup(nodes[i]->data.inline_.title) : NULL;
         (*links)[i].node = nodes[i];

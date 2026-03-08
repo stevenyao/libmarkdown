@@ -172,6 +172,128 @@ static char *trim_string(const char *str, size_t len) {
     return result;
 }
 
+static void parse_inline_text(md_node_t *parent, const char *text, size_t len) {
+    size_t i = 0;
+    size_t start = 0;
+    
+    while (i < len) {
+        // Image ![alt](url) or Link [text](url)
+        if (text[i] == '!' || text[i] == '[') {
+            int is_image = (text[i] == '!');
+            size_t bracket_start = is_image ? i + 1 : i;
+            
+            if (is_image && (i + 1 >= len || text[i+1] != '[')) {
+                i++; continue;
+            }
+            
+            size_t bracket_end = bracket_start + 1;
+            while (bracket_end < len && text[bracket_end] != ']') bracket_end++;
+            
+            if (bracket_end < len && bracket_end + 1 < len && text[bracket_end + 1] == '(') {
+                size_t paren_start = bracket_end + 1;
+                size_t paren_end = paren_start + 1;
+                while (paren_end < len && text[paren_end] != ')') paren_end++;
+                
+                if (paren_end < len) {
+                    if (start < i) {
+                         md_node_t *txt = create_block_node(MD_NODE_TEXT, text + start, i - start);
+                         md_node_add_child(parent, txt);
+                    }
+                    
+                    size_t content_len = bracket_end - bracket_start - 1;
+                    size_t url_len = paren_end - paren_start - 1;
+                    
+                    char *content_str = (char*)malloc(content_len + 1);
+                    if (content_len > 0) memcpy(content_str, text + bracket_start + 1, content_len);
+                    content_str[content_len] = 0;
+                    
+                    char *url_str = (char*)malloc(url_len + 1);
+                    if (url_len > 0) memcpy(url_str, text + paren_start + 1, url_len);
+                    url_str[url_len] = 0;
+                    
+                    md_node_t *node = create_block_node(is_image ? MD_NODE_IMAGE : MD_NODE_LINK, content_str, content_len);
+                    free(content_str);
+                    
+                    if (is_image) {
+                        node->data.inline_.alt = node->content ? strdup(node->content) : NULL;
+                        node->data.inline_.url = url_str;
+                    } else {
+                        node->data.inline_.url = url_str;
+                    }
+                    
+                    md_node_add_child(parent, node);
+                    
+                    i = paren_end + 1;
+                    start = i;
+                    continue;
+                }
+            }
+        }
+        
+        // Code Span `
+        if (text[i] == '`') {
+             size_t code_end = i + 1;
+             while (code_end < len && text[code_end] != '`') code_end++;
+             
+             if (code_end < len) {
+                 if (start < i) {
+                     md_node_t *txt = create_block_node(MD_NODE_TEXT, text + start, i - start);
+                     md_node_add_child(parent, txt);
+                 }
+                 
+                 size_t code_len = code_end - i - 1;
+                 md_node_t *code = create_block_node(MD_NODE_CODE_SPAN, text + i + 1, code_len);
+                 md_node_add_child(parent, code);
+                 
+                 i = code_end + 1;
+                 start = i;
+                 continue;
+             }
+        }
+        
+        i++;
+    }
+    
+    if (start < len) {
+        md_node_t *txt = create_block_node(MD_NODE_TEXT, text + start, len - start);
+        md_node_add_child(parent, txt);
+    }
+}
+
+static void parse_inlines_recursive(md_node_t *node) {
+    if (!node) return;
+    
+    if (node->content && node->content_len > 0 && 
+        (node->type == MD_NODE_PARAGRAPH || node->type == MD_NODE_HEADING)) {
+        
+        int has_trigger = 0;
+        for (size_t i = 0; i < node->content_len; i++) {
+            if (node->content[i] == '[' || node->content[i] == '`' || node->content[i] == '!') {
+                has_trigger = 1;
+                break;
+            }
+        }
+        
+        if (has_trigger) {
+            char *orig_content = node->content;
+            size_t orig_len = node->content_len;
+            
+            node->content = NULL;
+            node->content_len = 0;
+            
+            parse_inline_text(node, orig_content, orig_len);
+            
+            free(orig_content);
+        }
+    }
+    
+    md_node_t *child = node->first_child;
+    while (child) {
+        parse_inlines_recursive(child);
+        child = child->next;
+    }
+}
+
 int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document_t **out_doc) {
     if (!parser || !md || !out_doc) return -1;
     
@@ -480,6 +602,10 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
     }
     
     *out_doc = doc;
+    
+    // Parse inline elements (links, code spans, etc.)
+    parse_inlines_recursive(doc->root);
+    
     return 0;
 }
 
