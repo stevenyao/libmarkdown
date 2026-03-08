@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <string.h>
 #include "../include/markdown/error.h"
 
@@ -16,6 +17,7 @@ const char *md_error_string(md_error_t error) {
 }
 
 void md_error_init(md_error_info_t *err) {
+    if (!err) return;
     err->error = MD_ERROR_NONE;
     err->line = 0;
     err->column = 0;
@@ -23,6 +25,7 @@ void md_error_init(md_error_info_t *err) {
 }
 
 void md_error_set(md_error_info_t *err, md_error_t error, int line, int column, const char *msg) {
+    if (!err) return;
     err->error = error;
     err->line = line;
     err->column = column;
