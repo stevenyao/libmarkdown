@@ -17,7 +17,7 @@ bin:
 $(TARGET): $(OBJ)
 	ar rcs $@ $(OBJ)
 
-%.o: %.c
+bin/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
