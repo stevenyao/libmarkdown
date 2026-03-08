@@ -1,5 +1,7 @@
 # libmarkdown
 
+[中文版](./README.zhCN.md)
+
 A C library for parsing and analyzing Markdown documents, built on CommonMark 0.31.2 + GFM (GitHub Flavored Markdown) specification.
 
 ## Features
