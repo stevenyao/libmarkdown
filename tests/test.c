@@ -1541,6 +1541,133 @@ TEST(parser_many_newlines) {
     tests_passed++;
 }
 
+/* ==================== Coverage Tests ==================== */
+
+TEST(document_getters) {
+    const char *md = "# H1\n\n- [x] Task\n\n```c\ncode\n```\n\n[link](url \"title\")";
+    md_document_t *doc = md_parse(md, strlen(md));
+    ASSERT(doc != NULL, "doc parsed");
+    
+    md_node_t *root = doc->root;
+    ASSERT_EQ_INT(MD_NODE_DOCUMENT, md_node_get_type(root), "root type");
+    
+    // H1
+    const md_node_t *h1 = md_node_get_first_child(root);
+    ASSERT(h1 != NULL, "h1 exists");
+    ASSERT_EQ_INT(MD_NODE_HEADING, md_node_get_type(h1), "h1 type");
+    ASSERT_EQ_INT(1, md_node_get_heading_level(h1), "h1 level");
+    ASSERT(md_node_get_parent(h1) == root, "h1 parent");
+    ASSERT_EQ_STR("H1", md_node_get_content(h1), "h1 content");
+    
+    // List
+    const md_node_t *list = md_node_get_next(h1);
+    ASSERT(list != NULL, "list exists");
+    ASSERT_EQ_INT(MD_NODE_LIST, md_node_get_type(list), "list type");
+    ASSERT_EQ_INT(0, md_node_get_list_start(list), "list start");
+    ASSERT_EQ_INT(0, md_node_get_list_marker(list), "list marker (on list node)");
+    
+    // Task Item
+    const md_node_t *item = md_node_get_first_child(list);
+    ASSERT(item != NULL, "item exists");
+    ASSERT_EQ_INT(MD_NODE_TASK_LIST_ITEM, md_node_get_type(item), "item type");
+    ASSERT(md_node_is_task_list(item), "is task list item");
+    ASSERT(md_node_is_checked(item), "is checked");
+    ASSERT_EQ_INT('-', md_node_get_list_marker(item), "item marker");
+    
+    // Code
+    const md_node_t *code = md_node_get_next(list);
+    ASSERT(code != NULL, "code exists");
+    ASSERT_EQ_INT(MD_NODE_FENCED_CODE, md_node_get_type(code), "code type");
+    ASSERT_EQ_STR("c", md_node_get_code_language(code), "code lang");
+    ASSERT(md_node_get_prev(code) == list, "code prev");
+    ASSERT(md_node_get_last_child(root) != code, "code not last");
+    
+    // Paragraph with Link
+    const md_node_t *para = md_node_get_next(code);
+    ASSERT(para != NULL, "para exists");
+    const md_node_t *link = md_node_get_first_child(para);
+    ASSERT(link != NULL, "link exists");
+    ASSERT_EQ_INT(MD_NODE_LINK, md_node_get_type(link), "link type");
+    ASSERT_EQ_STR("url \"title\"", md_node_get_url(link), "link url");
+    
+    // Test null/invalid getters
+    ASSERT(md_node_get_parent(NULL) == NULL, "null parent");
+    ASSERT(md_node_get_first_child(NULL) == NULL, "null first child");
+    ASSERT(md_node_get_next(NULL) == NULL, "null next");
+    ASSERT_EQ_INT(0, md_node_get_heading_level(NULL), "null heading level");
+    ASSERT(md_node_get_code_language(NULL) == NULL, "null code lang");
+    ASSERT(md_node_get_url(NULL) == NULL, "null url");
+    
+    md_document_free(doc);
+    tests_passed++;
+}
+
+TEST(table_extraction_manual) {
+    // Construct AST manually to test extractor fully
+    md_document_t *doc = (md_document_t *)malloc(sizeof(md_document_t));
+    memset(doc, 0, sizeof(md_document_t));
+    
+    md_node_t *root = (md_node_t *)malloc(sizeof(md_node_t));
+    memset(root, 0, sizeof(md_node_t));
+    root->type = MD_NODE_DOCUMENT;
+    doc->root = root;
+    
+    md_node_t *table = (md_node_t *)malloc(sizeof(md_node_t));
+    memset(table, 0, sizeof(md_node_t));
+    table->type = MD_NODE_TABLE;
+    md_node_add_child(root, table);
+    
+    // Row 1
+    md_node_t *row1 = (md_node_t *)malloc(sizeof(md_node_t));
+    memset(row1, 0, sizeof(md_node_t));
+    row1->type = MD_NODE_TABLE_ROW;
+    md_node_add_child(table, row1);
+    
+    // Cell 1
+    md_node_t *cell1 = (md_node_t *)malloc(sizeof(md_node_t));
+    memset(cell1, 0, sizeof(md_node_t));
+    cell1->type = MD_NODE_TABLE_CELL;
+    cell1->content = strdup("cell1");
+    cell1->content_len = 5;
+    cell1->data.block.table_align = MD_TABLE_ALIGN_CENTER;
+    md_node_add_child(row1, cell1);
+    
+    // Extract
+    md_table_t *tables = NULL;
+    size_t count = 0;
+    
+    int ret = md_extract_tables(doc, &tables, &count);
+    ASSERT_EQ_INT(0, ret, "manual table extract");
+    ASSERT_EQ_INT(1, count, "manual table count");
+    
+    ASSERT_EQ_INT(1, tables[0].row_count, "row count");
+    ASSERT_EQ_INT(1, tables[0].col_count, "col count");
+    ASSERT(tables[0].rows[0][0] != NULL, "cell content exists");
+    ASSERT_EQ_STR("cell1", tables[0].rows[0][0], "cell content");
+    ASSERT_EQ_INT(MD_TABLE_ALIGN_CENTER, tables[0].aligns[0], "cell align");
+    
+    md_tables_free(tables, count);
+    md_document_free(doc);
+    
+    tests_passed++;
+}
+
+TEST(image_getter) {
+    const char *md = "![alt](url)";
+    md_document_t *doc = md_parse(md, strlen(md));
+    
+    md_node_t *para = doc->root->first_child;
+    md_node_t *img = para->first_child;
+    
+    ASSERT_EQ_INT(MD_NODE_IMAGE, md_node_get_type(img), "image type");
+    ASSERT_EQ_STR("alt", md_node_get_alt(img), "image alt");
+    ASSERT_EQ_STR("url", md_node_get_url(img), "image url");
+    ASSERT(md_node_get_title(img) == NULL, "image title null");
+    
+    md_document_free(doc);
+    tests_passed++;
+}
+
 /* ==================== Main ==================== */
 
 int main(void) {
@@ -1648,6 +1775,11 @@ int main(void) {
     RUN_TEST(parser_edge_cases);
     RUN_TEST(parser_very_long_line);
     RUN_TEST(parser_many_newlines);
+    
+    printf("\n--- Coverage Tests ---\n");
+    RUN_TEST(document_getters);
+    RUN_TEST(table_extraction_manual);
+    RUN_TEST(image_getter);
     
     printf("\n=== Results ===\n");
     printf("Tests passed: %d\n", tests_passed);
