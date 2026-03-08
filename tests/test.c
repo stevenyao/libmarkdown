@@ -1436,6 +1436,46 @@ TEST(parser_parse_file_memory_error) {
     tests_passed++;
 }
 
+TEST(parser_parse_file_success) {
+    const char *filename = "test_sample.md";
+    const char *content = "# Title\n\nContent";
+    
+    // Write file
+    FILE *fp = fopen(filename, "wb");
+    if (fp) {
+        fwrite(content, 1, strlen(content), fp);
+        fclose(fp);
+    } else {
+        printf("Failed to create test file\n");
+        tests_failed++;
+        return;
+    }
+    
+    md_parser_t *parser = md_parser_create(NULL);
+    md_document_t *doc = NULL;
+    
+    int ret = md_parser_parse_file(parser, filename, &doc);
+    ASSERT_EQ_INT(0, ret, "parse file success");
+    ASSERT(doc != NULL, "doc created");
+    
+    // Verify content
+    const char *src = md_document_get_source(doc);
+    ASSERT_EQ_STR(content, src, "source match");
+    
+    md_document_free(doc);
+    md_parser_destroy(parser);
+    
+    // Test wrapper
+    doc = md_parse_file(filename);
+    ASSERT(doc != NULL, "wrapper parse file");
+    ASSERT_EQ_STR(content, md_document_get_source(doc), "wrapper source");
+    md_document_free(doc);
+    
+    remove(filename);
+    
+    tests_passed++;
+}
+
 /* ==================== Edge Cases ==================== */
 
 TEST(parser_special_characters) {
@@ -1668,6 +1708,84 @@ TEST(image_getter) {
     tests_passed++;
 }
 
+TEST(parser_inline_edge_cases) {
+    // Incomplete or invalid inline sequences
+    const char *md = "!\n![\n![alt\n![alt]\n![alt](\n![alt](url\n[\n[text\n[text]\n[text](\n[text](url";
+    md_document_t *doc = md_parse(md, strlen(md));
+    ASSERT(doc != NULL, "parse inline edges");
+    // Just verify it doesn't crash and parse finishes
+    md_document_free(doc);
+    tests_passed++;
+}
+
+TEST(parser_list_edge_cases) {
+    // 1) item
+    const char *md1 = "1) item";
+    md_document_t *doc = md_parse(md1, strlen(md1));
+    md_node_t *list = doc->root->first_child;
+    ASSERT(list != NULL && list->type == MD_NODE_LIST, "ordered list paren");
+    md_document_free(doc);
+    
+    // 1.item (no space) -> paragraph
+    const char *md2 = "1.item";
+    doc = md_parse(md2, strlen(md2));
+    md_node_t *para = doc->root->first_child;
+    ASSERT(para != NULL && para->type == MD_NODE_PARAGRAPH, "no space list");
+    md_document_free(doc);
+    
+    // -[ ] item (no space after hyphen) -> Parser allows this as list item (implementation detail)
+    const char *md3 = "-[ ] item";
+    doc = md_parse(md3, strlen(md3));
+    md_node_t *root_child = doc->root->first_child;
+    ASSERT(root_child != NULL && root_child->type == MD_NODE_LIST, "no space task is list");
+    md_document_free(doc);
+    
+    tests_passed++;
+}
+
+TEST(extractor_table_empty_content) {
+    md_document_t *doc = (md_document_t *)malloc(sizeof(md_document_t));
+    memset(doc, 0, sizeof(md_document_t));
+    doc->root = (md_node_t *)calloc(1, sizeof(md_node_t));
+    doc->root->type = MD_NODE_DOCUMENT;
+    
+    md_node_t *table = (md_node_t *)calloc(1, sizeof(md_node_t));
+    table->type = MD_NODE_TABLE;
+    md_node_add_child(doc->root, table);
+    
+    // No rows
+    
+    md_table_t *tables = NULL;
+    size_t count = 0;
+    md_extract_tables(doc, &tables, &count);
+    ASSERT_EQ_INT(1, count, "empty table count");
+    ASSERT_EQ_INT(0, tables[0].row_count, "empty table rows");
+    
+    md_tables_free(tables, count);
+    md_document_free(doc);
+    tests_passed++;
+}
+
+TEST(parser_heading_whitespace) {
+    // "#   " -> Empty title
+    md_document_t *doc = md_parse("#   ", 4);
+    md_node_t *h = doc->root->first_child;
+    ASSERT(h != NULL, "empty heading");
+    ASSERT_EQ_INT(MD_NODE_HEADING, h->type, "heading type");
+    // content should be null because length is 0
+    ASSERT(h->content == NULL, "empty heading content null");
+    md_document_free(doc);
+    
+    // "#" -> Paragraph (too short for ATX)
+    doc = md_parse("#", 1);
+    h = doc->root->first_child;
+    ASSERT(h != NULL, "just hash");
+    ASSERT_EQ_INT(MD_NODE_PARAGRAPH, h->type, "just hash is paragraph");
+    md_document_free(doc);
+    
+    tests_passed++;
+}
+
 /* ==================== Main ==================== */
 
 int main(void) {
@@ -1766,6 +1884,7 @@ int main(void) {
     RUN_TEST(parser_parse_file);
     RUN_TEST(parser_get_error);
     RUN_TEST(parser_parse_file_memory_error);
+    RUN_TEST(parser_parse_file_success);
     
     printf("\n--- Edge Cases ---\n");
     RUN_TEST(parser_special_characters);
@@ -1780,6 +1899,11 @@ int main(void) {
     RUN_TEST(document_getters);
     RUN_TEST(table_extraction_manual);
     RUN_TEST(image_getter);
+    RUN_TEST(parser_inline_edge_cases);
+    RUN_TEST(parser_list_edge_cases);
+    RUN_TEST(extractor_table_empty_content);
+    
+    RUN_TEST(parser_heading_whitespace);
     
     printf("\n=== Results ===\n");
     printf("Tests passed: %d\n", tests_passed);
