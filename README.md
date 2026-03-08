@@ -6,11 +6,14 @@ A C library for parsing and analyzing Markdown documents, built on CommonMark 0.
 
 ## Features
 
-- **Pure C implementation** - No external dependencies
+- **Pure C implementation** - No external dependencies, C11 standard
 - **AST-based parsing** - Build abstract syntax tree from Markdown
-- **Iterator API** - Traverse all document elements easily
+- **Iterator API** - Traverse all document elements with position information
 - **Content extraction** - Extract headings, code blocks, links, images, etc.
-- **CommonMark + GFM** - Supports most CommonMark and GitHub extensions
+- **CommonMark + GFM** - Supports CommonMark 0.31.2 and GitHub Flavored Markdown
+- **Comprehensive error handling** - Detailed error messages with line/column info
+- **Code coverage** - Built-in coverage testing support
+- **Modular design** - Separate parser, iterator, extractor modules
 
 ## Quick Start
 
@@ -41,7 +44,11 @@ make
 
 # Run tests
 make test
-# or
+
+# Run coverage tests
+make coverage
+
+# Or run test directly
 ./bin/test
 ```
 
@@ -50,13 +57,31 @@ make test
 ```
 libmarkdown/
 ├── include/markdown/    # Header files
-│   └── markdown.h      # Main header
-├── src/               # Source code
-├── tests/             # Test cases
-├── doc/               # Design documentation
-├── bin/               # Build output
-│   ├── libmarkdown.a # Static library
-│   └── test          # Test program
+│   ├── markdown.h      # Main header
+│   ├── ast.h           # AST node definitions
+│   ├── iterator.h      # Iterator API
+│   ├── parser.h        # Parser API
+│   ├── document.h      # Document operations
+│   ├── extractor.h     # Content extraction
+│   └── error.h         # Error handling
+├── src/                # Source code
+│   ├── parser.c        # Parser implementation
+│   ├── parser_debug.c  # Parser debugging tools
+│   ├── ast.c           # AST operations
+│   ├── iterator.c      # Iterator implementation
+│   ├── document.c      # Document API
+│   ├── extractor.c     # Content extraction
+│   └── error.c         # Error handling
+├── tests/              # Test cases
+│   ├── test.c          # Test suite
+│   └── sample.md       # Test document
+├── doc/                # Documentation
+│   ├── design.md       # Design documentation
+│   └── prompt.md       # Development prompts
+├── bin/                # Build output
+│   ├── libmarkdown.a   # Static library
+│   └── test            # Test program
+├── test_*.c            # Example test programs
 └── Makefile
 ```
 
@@ -96,7 +121,7 @@ md_code_blocks_free(codes, count);
 ### Compile Your Program
 
 ```bash
-gcc -o myapp myapp.c -I include -L bin -lmarkdown
+gcc -o myapp myapp.c -I include -L bin -lmarkdown -std=c11
 ```
 
 ## API Reference
@@ -114,13 +139,19 @@ See [doc/design.md](doc/design.md) for detailed API documentation.
 - Thematic Breaks
 - HTML Blocks
 - Paragraphs
+- Link Reference Definitions
+- YAML Front Matter
 
 **Inline Elements:**
-- Emphasis (Bold/Italic)
+- Emphasis (Italic, Bold, Bold-Italic)
 - Code Spans
 - Links / Images
-- Line Breaks
+- Hard / Soft Line Breaks
 - Strikethrough (GFM)
+- Autolinks (URL/Email)
+- Inline HTML
+- Footnotes
+- Mark / Subscript / Superscript
 
 ## License
 

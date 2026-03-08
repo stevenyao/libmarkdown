@@ -85,6 +85,18 @@ int main() {
 ### 3.2 解析 API
 
 ```c
+// 解析器选项
+typedef struct md_parser_options {
+    int parse_yaml_front_matter;
+    int parse_footnotes;
+    int parse_table;
+    int parse_task_list;
+    int parse_strikethrough;
+    int parse_autolink;
+    int parse_html;
+    size_t max_nesting;
+} md_parser_options_t;
+
 // 使用默认选项解析
 md_document_t *md_parse(const char *md, size_t len);
 md_document_t *md_parse_file(const char *filepath);
@@ -92,12 +104,46 @@ md_document_t *md_parse_file(const char *filepath);
 // 使用自定义选项解析
 md_parser_t *md_parser_create(const md_parser_options_t *opts);
 int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document_t **doc);
+int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_t **doc);
 void md_parser_destroy(md_parser_t *parser);
+
+// 获取解析错误
+int md_parser_get_error(const md_parser_t *parser, md_error_info_t *err);
 ```
 
 ### 3.3 迭代器 API
 
 ```c
+// 元素结构
+typedef struct md_element {
+    md_node_type_t type;
+    int line;
+    int column;
+    char *content;
+    size_t content_len;
+    
+    union {
+        struct {
+            int heading_level;
+            char *language;
+            int list_start;
+            char list_marker;
+            int is_task;
+            int is_checked;
+        } block;
+        
+        struct {
+            char *url;
+            char *title;
+            char *alt;
+            int emphasis_level;
+        } inline_;
+    } data;
+    
+    md_node_type_t parent_type;
+    int depth;
+} md_element_t;
+
 // 创建迭代器
 md_iterator_t *md_iterator_create(const md_document_t *doc);
 
@@ -155,45 +201,84 @@ typedef enum md_node_type {
     MD_NODE_TASK_LIST_ITEM,     // 任务列表项 (GFM)
     MD_NODE_BLOCKQUOTE,         // 引用块
     MD_NODE_TABLE,              // 表格 (GFM)
+    MD_NODE_TABLE_HEAD,         // 表格头部
+    MD_NODE_TABLE_ROW,          // 表格行
+    MD_NODE_TABLE_CELL,         // 表格单元格
     MD_NODE_THEMATIC_BREAK,     // 水平线
     MD_NODE_HTML_BLOCK,         // HTML 块
     MD_NODE_PARAGRAPH,          // 段落
+    MD_NODE_LINK_REF_DEF,       // 链接引用定义
+    MD_NODE_FRONT_MATTER,       // 前置元数据 (YAML)
     
     // 行内元素
     MD_NODE_TEXT,               // 普通文本
     MD_NODE_EMPHASIS,           // 斜体
     MD_NODE_STRONG,             // 粗体
+    MD_NODE_STRONG_EMPHASIS,    // 粗斜体
+    MD_NODE_STRIKETHROUGH,      // 删除线 (GFM)
     MD_NODE_CODE_SPAN,          // 行内代码
     MD_NODE_LINK,               // 链接
     MD_NODE_IMAGE,              // 图片
-    // ... 更多类型
+    MD_NODE_AUTOLINK,           // 自动链接
+    MD_NODE_EMAIL_AUTOLINK,     // 邮箱自动链接
+    MD_NODE_LINE_BREAK,         // 硬换行
+    MD_NODE_SOFT_LINE_BREAK,    // 软换行
+    MD_NODE_HTML_INLINE,        // 行内 HTML
+    MD_NODE_FOOTNOTE_REF,       // 脚注引用
+    MD_NODE_FOOTNOTE_DEF,       // 脚注定义
+    MD_NODE_MARK,               // 标记
+    MD_NODE_SUBSCRIPT,          // 下标
+    MD_NODE_SUPERSCRIPT,        // 上标
+    MD_NODE_SPAN,               // 通用行内容器
 } md_node_type_t;
 ```
 
-### 4.2 元素结构
+### 4.2 节点结构
 
 ```c
-typedef struct md_element {
-    md_node_type_t type;        // 元素类型
-    int line;                   // 行号
-    int column;                 // 列号
-    char *content;              // 文本内容
-    size_t content_len;          // 内容长度
+typedef struct md_node {
+    md_node_type_t type;        // 节点类型
+    int flags;                  // 标志位
     
     union {
         struct {
-            int heading_level; // 标题级别 (1-6)
-            char *language;    // 代码语言
+            int heading_level;  // 标题级别 (1-6)
+            char *language;     // 代码语言
+            char *info_string;  // 信息字符串
+            char *raw_html;     // 原始 HTML
+            int list_start;     // 列表起始编号
+            char list_marker;   // 列表标记字符
+            md_list_type_t list_type;      // 列表类型
+            md_list_delim_t list_delim;    // 列表分隔符
+            int is_task;        // 是否为任务列表
             int is_checked;     // 任务是否完成
+            md_table_align_t table_align;  // 表格对齐方式
         } block;
         
         struct {
-            char *url;         // 链接/图片 URL
-            char *title;       // 链接标题
-            char *alt;         // 图片 alt 文本
+            char *url;          // 链接/图片 URL
+            char *title;        // 链接标题
+            char *alt;          // 图片 alt 文本
+            int emphasis_level; // 强调级别
         } inline_;
     } data;
-} md_element_t;
+    
+    char *content;              // 文本内容
+    size_t content_len;         // 内容长度
+    struct md_node *parent;     // 父节点
+    struct md_node *first_child;// 第一个子节点
+    struct md_node *last_child; // 最后一个子节点
+    struct md_node *prev;       // 前一个兄弟节点
+    struct md_node *next;       // 后一个兄弟节点
+} md_node_t;
+
+// 文档结构
+typedef struct {
+    md_node_t *root;            // AST 根节点
+    char *source;               // 原始源代码
+    size_t source_len;          // 源代码长度
+    md_node_t *link_refs;       // 链接引用定义链表
+} md_document_t;
 ```
 
 ---
@@ -214,20 +299,30 @@ typedef struct md_element {
 | 有序列表 | `1. item` | ✅ |
 | 任务列表 | `- [x] done` (GFM) | ✅ |
 | 引用块 | `> quote` | ✅ |
+| 表格 | `\|a\|b\|` (GFM) | ✅ |
 | 水平线 | `---`, `***` | ✅ |
-| 表格 | `\|a\|b\|` (GFM) | 部分 |
-| HTML 块 | `<div>html</div>` | 部分 |
+| HTML 块 | `<div>html</div>` | ✅ |
+| 链接引用定义 | `[id]: url "title"` | ✅ |
+| YAML 前置元数据 | `---\ntitle: ...\n---` | ✅ |
 
 **行内元素 (Inline Elements)**:
 
 | 元素 | 语法示例 | 支持 |
 |------|---------|------|
 | 行内代码 | `` `code` `` | ✅ |
-| 强调 | `*italic*`, `**bold**` | 部分 |
-| 链接 | `[text](url)` | 部分 |
-| 图片 | `![alt](url)` | 部分 |
-| 删除线 | `~~text~~` (GFM) | 部分 |
-| 自动链接 | `<https://url>` (GFM) | 部分 |
+| 强调 | `*italic*`, `**bold**`, `***bold italic***` | ✅ |
+| 链接 | `[text](url)` | ✅ |
+| 图片 | `![alt](url)` | ✅ |
+| 删除线 | `~~text~~` (GFM) | ✅ |
+| 自动链接 | `<https://url>` (GFM) | ✅ |
+| 邮箱自动链接 | `<email@example.com>` | ✅ |
+| 硬换行 | `line  \nline` | ✅ |
+| 软换行 | `line\nline` | ✅ |
+| 行内 HTML | `<span>text</span>` | ✅ |
+| 脚注 | `[^1]` | ✅ |
+| 标记 | `==text==` | ✅ |
+| 下标 | `~text~` | ✅ |
+| 上标 | `^text^` | ✅ |
 
 ---
 
@@ -249,11 +344,16 @@ make clean
 gcc -o myapp myapp.c -I include -L . -lmarkdown
 ```
 
-### 6.3 运行测试
+### 6.3 运行测试和覆盖率
 
 ```bash
+# 运行测试
 make test
-# 或
+
+# 运行覆盖率测试
+make coverage
+
+# 或直接运行测试程序
 ./bin/test
 ```
 
@@ -265,28 +365,31 @@ make test
 libmarkdown/
 ├── include/markdown/           # 公共头文件
 │   ├── markdown.h             # 主头文件
-│   ├── ast.h                 # 节点类型定义
-│   ├── iterator.h            # 迭代器 API
-│   ├── parser.h              # 解析器 API
-│   ├── document.h            # 文档操作
-│   ├── extractor.h           # 内容抽取
-│   └── error.h               # 错误处理
-├── src/                      # 源代码
-│   ├── parser.c              # 解析器实现
-│   ├── ast.c                 # AST 操作
-│   ├── iterator.c            # 迭代器实现
-│   ├── document.c            # 文档 API
-│   ├── extractor.c           # 内容抽取
-│   └── error.c               # 错误处理
-├── tests/                    # 测试代码
-│   ├── test.c                # 测试用例
-│   └── sample.md             # 测试文档
-├── doc/                      # 文档
-│   └── design.md             # 本设计文档
-├── bin/                      # 编译输出
-│   ├── libmarkdown.a         # 静态库
-│   └── test                  # 测试程序
-├── Makefile                  # 构建文件
+│   ├── ast.h                  # 节点类型定义
+│   ├── iterator.h             # 迭代器 API
+│   ├── parser.h               # 解析器 API
+│   ├── document.h             # 文档操作
+│   ├── extractor.h            # 内容抽取
+│   └── error.h                # 错误处理
+├── src/                       # 源代码
+│   ├── parser.c               # 解析器实现
+│   ├── parser_debug.c         # 解析器调试工具
+│   ├── ast.c                  # AST 操作
+│   ├── iterator.c             # 迭代器实现
+│   ├── document.c             # 文档 API
+│   ├── extractor.c            # 内容抽取
+│   └── error.c                # 错误处理
+├── tests/                     # 测试代码
+│   ├── test.c                 # 测试用例
+│   └── sample.md              # 测试文档
+├── doc/                       # 文档
+│   ├── design.md              # 本设计文档
+│   └── prompt.md              # 开发提示
+├── bin/                       # 编译输出
+│   ├── libmarkdown.a          # 静态库
+│   └── test                   # 测试程序
+├── Makefile                   # 构建文件
+├── test_*.c                   # 测试示例程序
 └── .gitignore
 ```
 
@@ -315,6 +418,9 @@ if (has_error == 0) {
 - `MD_ERROR_SYNTAX` - 语法错误
 - `MD_ERROR_MAX_NESTING` - 超出最大嵌套深度
 - `MD_ERROR_INTERNAL` - 内部错误
+- `MD_ERROR_UNEXPECTED_EOF` - 意外的文件结束
+- `MD_ERROR_INVALID_CHAR` - 无效字符
+- `MD_ERROR_INVALID_STATE` - 无效状态
 
 ---
 
@@ -392,9 +498,11 @@ md_iterator_destroy(iter);
 
 ## 11. 未来计划
 
-- [ ] 完善行内元素解析
-- [ ] 支持表格完整解析
+- [x] 完善行内元素解析
+- [x] 支持表格完整解析
 - [ ] 添加 AST 修改 API
 - [ ] 支持输出 HTML
 - [ ] 性能优化
 - [ ] 内存池优化
+- [ ] 支持更多 GFM 扩展
+- [ ] 添加序列化/反序列化 API
