@@ -206,9 +206,7 @@ void md_images_free(md_image_t *images, size_t count) {
 }
 
 int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *count) {
-    (void)doc;
-    (void)tables;
-    (void)count;
+    if (!doc || !tables || !count) return -1;
     return 0;
 }
 
@@ -220,9 +218,9 @@ void md_tables_free(md_table_t *tables, size_t count) {
 static void collect_text(const md_node_t *node, char **result, size_t *len) {
     if (!node || !result) return;
     
-    if (node->type == MD_NODE_TEXT && node->content) {
+    if (node->content && node->content_len > 0) {
         size_t node_len = node->content_len;
-        char *new_result = (char *)realloc(*result, *len + node_len);
+        char *new_result = (char *)realloc(*result, *len + node_len + 1);
         if (new_result) {
             memcpy(new_result + *len, node->content, node_len);
             *len += node_len;

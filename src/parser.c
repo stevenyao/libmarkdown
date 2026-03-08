@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "../include/markdown/parser.h"
+#include "../include/markdown/document.h"
 
 struct md_parser {
     md_parser_options_t opts;
@@ -33,6 +35,11 @@ void md_parser_destroy(md_parser_t *parser) {
 static md_document_t *create_document(const char *md, size_t len) {
     md_document_t *doc = (md_document_t *)malloc(sizeof(md_document_t));
     if (!doc) return NULL;
+    
+    if (len == SIZE_MAX) {
+        free(doc);
+        return NULL;
+    }
     
     doc->source = (char *)malloc(len + 1);
     if (!doc->source) {
@@ -79,6 +86,16 @@ static int is_thematic_break(const char *line, size_t len) {
     return count >= 3;
 }
 
+static int is_setext_underline(const char *line, size_t len) {
+    if (len < 3) return 0;
+    char c = line[0];
+    if (c != '=' && c != '-') return 0;
+    for (size_t i = 0; i < len; i++) {
+        if (line[i] != c && line[i] != ' ' && line[i] != '\t') return 0;
+    }
+    return 1;
+}
+
 static int is_fenced_code_start(const char *line, size_t len) {
     if (len < 3) return 0;
     if (line[0] != '`' && line[0] != '~') return 0;
@@ -89,6 +106,11 @@ static int is_fenced_code_start(const char *line, size_t len) {
 
 static int is_block_quote(const char *line, size_t len) {
     return len > 0 && line[0] == '>';
+}
+
+static int is_indented_code(const char *line, size_t len) {
+    if (len < 4) return 0;
+    return (line[0] == ' ' && line[1] == ' ' && line[2] == ' ' && line[3] == ' ') || line[0] == '\t';
 }
 
 static int is_list_marker(const char *line, size_t len) {
@@ -117,6 +139,10 @@ static md_node_t *create_block_node(md_node_type_t type, const char *content, si
     node->type = type;
     
     if (content && len > 0) {
+        if (len == SIZE_MAX) {
+            free(node);
+            return NULL;
+        }
         node->content = (char *)malloc(len + 1);
         if (!node->content) {
             free(node);
@@ -133,6 +159,10 @@ static md_node_t *create_block_node(md_node_type_t type, const char *content, si
 static char *trim_string(const char *str, size_t len) {
     while (len > 0 && (str[0] == ' ' || str[0] == '\t')) { str++; len--; }
     while (len > 0 && (str[len-1] == ' ' || str[len-1] == '\t')) len--;
+    
+    if (len == SIZE_MAX) {
+        return NULL;
+    }
     
     char *result = (char *)malloc(len + 1);
     if (result) {
@@ -160,12 +190,33 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
     const char *line_start = md;
     int line_num = 1;
     
-    while (line_start < md + len) {
+    const char *md_end = md + len;
+    if (md_end < md) {
+        md_document_free(doc);
+        parser->parse_error = 1;
+        md_error_set(&parser->error, MD_ERROR_MEMORY, 1, 1, "Input too large");
+        return -1;
+    }
+    
+    while (line_start < md_end) {
         const char *line_end = line_start;
-        while (line_end < md + len && *line_end != '\n' && *line_end != '\r') line_end++;
+        while (line_end < md_end && *line_end != '\n' && *line_end != '\r') line_end++;
         size_t line_len = line_end - line_start;
         
+        if (line_len == SIZE_MAX) {
+            md_document_free(doc);
+            parser->parse_error = 1;
+            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Line too long");
+            return -1;
+        }
+        
         char *line_copy = (char *)malloc(line_len + 1);
+        if (!line_copy) {
+            md_document_free(doc);
+            parser->parse_error = 1;
+            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate line buffer");
+            return -1;
+        }
         memcpy(line_copy, line_start, line_len);
         line_copy[line_len] = '\0';
         
@@ -186,11 +237,21 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 md_node_add_child(root, hr);
                 last_block = hr;
             }
+        } else if (is_setext_underline(line_copy, line_len)) {
+            if (last_block && last_block->type == MD_NODE_PARAGRAPH) {
+                last_block->type = MD_NODE_HEADING;
+                last_block->data.block.heading_level = (line_copy[0] == '=') ? 1 : 2;
+            }
+            last_block = NULL;
         } else if (is_fenced_code_start(line_copy, line_len)) {
+            char fence_char = line_copy[0];
+            size_t fence_len = 0;
+            while (fence_len < line_len && line_copy[fence_len] == fence_char) fence_len++;
+            
             char *lang = NULL;
-            char *info = line_copy + 3;
+            char *info = line_copy + fence_len;
             while (*info == ' ' || *info == '\t') info++;
-            size_t info_len = line_len - 3 - (info - line_copy);
+            size_t info_len = line_len - fence_len - (info - line_copy);
             if (info_len > 0) {
                 lang = trim_string(info, info_len);
             }
@@ -200,11 +261,108 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 code->data.block.language = lang;
                 md_node_add_child(root, code);
                 last_block = code;
+                
+                char *code_content = NULL;
+                size_t code_capacity = 0;
+                size_t code_len = 0;
+                
+                line_start = line_end;
+                if (line_end < md + len && *line_end == '\r' && line_end + 1 < md + len && line_end[1] == '\n') {
+                    line_start += 2;
+                } else if (line_end < md + len && (*line_end == '\n' || *line_end == '\r')) {
+                    line_start++;
+                }
+                line_num++;
+                
+                while (line_start < md_end) {
+                    const char *content_end = line_start;
+                    while (content_end < md_end && *content_end != '\n' && *content_end != '\r') content_end++;
+                    size_t content_len = content_end - line_start;
+                    
+                    char *content_line = (char *)malloc(content_len + 1);
+                    if (!content_line) {
+                        free(code_content);
+                        free(line_copy);
+                        md_document_free(doc);
+                        parser->parse_error = 1;
+                        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code line");
+                        return -1;
+                    }
+                    memcpy(content_line, line_start, content_len);
+                    content_line[content_len] = '\0';
+                    
+                    if (content_len >= fence_len) {
+                        int is_closing = 1;
+                        for (size_t i = 0; i < fence_len; i++) {
+                            if (content_line[i] != fence_char) {
+                                is_closing = 0;
+                                break;
+                            }
+                        }
+                        if (is_closing) {
+                            int only_fence = 1;
+                            for (size_t i = fence_len; i < content_len; i++) {
+                                if (content_line[i] != ' ' && content_line[i] != '\t') {
+                                    only_fence = 0;
+                                    break;
+                                }
+                            }
+                            if (only_fence) {
+                                free(content_line);
+                                line_start = content_end;
+                                if (content_end < md_end && *content_end == '\r' && content_end + 1 < md_end && content_end[1] == '\n') {
+                                    line_start += 2;
+                                } else if (content_end < md_end && (*content_end == '\n' || *content_end == '\r')) {
+                                    line_start++;
+                                }
+                                line_num++;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    size_t new_len = code_len + content_len + 1;
+                    if (new_len > code_capacity) {
+                        size_t new_capacity = code_capacity ? code_capacity * 2 : 256;
+                        if (new_capacity < new_len) new_capacity = new_len;
+                        char *new_content = (char *)realloc(code_content, new_capacity);
+                        if (!new_content) {
+                            free(content_line);
+                            free(code_content);
+                            free(line_copy);
+                            md_document_free(doc);
+                            parser->parse_error = 1;
+                            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code content");
+                            return -1;
+                        }
+                        code_content = new_content;
+                        code_capacity = new_capacity;
+                    }
+                    
+                    if (code_len > 0) {
+                        code_content[code_len] = '\n';
+                        code_len++;
+                    }
+                    memcpy(code_content + code_len, line_start, content_len);
+                    code_len += content_len;
+                    
+                    free(content_line);
+                    
+                    line_start = content_end;
+                    if (content_end < md_end && *content_end == '\r' && content_end + 1 < md_end && content_end[1] == '\n') {
+                        line_start += 2;
+                    } else if (content_end < md_end && (*content_end == '\n' || *content_end == '\r')) {
+                        line_start++;
+                    }
+                    line_num++;
+                }
+                
+                if (code_content) {
+                    code->content = code_content;
+                    code->content_len = code_len;
+                }
             }
             
-            while (line_end < md + len && (*line_end == '\n' || *line_end == '\r')) line_end++;
-            line_start = line_end;
-            line_num++;
             free(line_copy);
             continue;
         } else if (is_block_quote(line_copy, line_len)) {
@@ -223,10 +381,18 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
             
             if (line_copy[0] >= '0' && line_copy[0] <= '9') {
                 list_type = MD_NODE_LIST_ITEM;
-            } else if (line_len > 2 && line_copy[1] == '[') {
+            } else if (line_len > 2 && line_copy[1] == '[' && line_copy[3] == ']') {
                 list_type = MD_NODE_TASK_LIST_ITEM;
                 is_task = 1;
                 if (line_copy[2] == 'x' || line_copy[2] == 'X') is_checked = 1;
+            } else {
+                char *ptr = line_copy + 1;
+                while (*ptr == ' ' || *ptr == '\t') ptr++;
+                if (*ptr == '[' && ptr[1] != '\0' && ptr[2] == ']') {
+                    list_type = MD_NODE_TASK_LIST_ITEM;
+                    is_task = 1;
+                    if (ptr[1] == 'x' || ptr[1] == 'X') is_checked = 1;
+                }
             }
             
             md_node_t *item = create_block_node(list_type, line_copy, line_len);
@@ -250,36 +416,65 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 }
                 last_block = item;
             }
-        } else if (line_len == 0 || last_block == NULL || last_block->type == MD_NODE_PARAGRAPH) {
-            if (line_len > 0) {
-                md_node_t *para;
-                if (last_block && last_block->type == MD_NODE_PARAGRAPH) {
-                    para = last_block;
-                    size_t old_len = para->content_len;
-                    size_t new_len = old_len + 1 + line_len;
-                    char *new_content = (char *)realloc(para->content, new_len + 1);
-                    if (new_content) {
-                        new_content[old_len] = ' ';
-                        memcpy(new_content + old_len + 1, line_copy, line_len);
-                        new_content[new_len] = '\0';
-                        para->content = new_content;
-                        para->content_len = new_len;
-                    }
-                } else {
-                    char *para_content = trim_string(line_copy, line_len);
-                    para = create_block_node(MD_NODE_PARAGRAPH, para_content, strlen(para_content));
-                    if (para) {
-                        md_node_add_child(root, para);
-                        last_block = para;
-                    }
-                    free(para_content);
+        } else if (is_indented_code(line_copy, line_len)) {
+            md_node_t *code;
+            if (last_block && last_block->type == MD_NODE_INDENTED_CODE) {
+                code = last_block;
+                size_t old_len = code->content_len;
+                size_t new_len = old_len + 1 + line_len;
+                char *new_content = (char *)realloc(code->content, new_len + 1);
+                if (new_content) {
+                    new_content[old_len] = '\n';
+                    memcpy(new_content + old_len + 1, line_copy, line_len);
+                    new_content[new_len] = '\0';
+                    code->content = new_content;
+                    code->content_len = new_len;
                 }
+            } else {
+                char *code_content = trim_string(line_copy, line_len);
+                code = create_block_node(MD_NODE_INDENTED_CODE, code_content, strlen(code_content));
+                if (code) {
+                    md_node_add_child(root, code);
+                    last_block = code;
+                }
+                free(code_content);
+            }
+        } else if (line_len == 0) {
+            last_block = NULL;
+        } else {
+            md_node_t *para;
+            if (last_block && last_block->type == MD_NODE_PARAGRAPH) {
+                para = last_block;
+                size_t old_len = para->content_len;
+                size_t new_len = old_len + 1 + line_len;
+                char *new_content = (char *)realloc(para->content, new_len + 1);
+                if (new_content) {
+                    new_content[old_len] = ' ';
+                    memcpy(new_content + old_len + 1, line_copy, line_len);
+                    new_content[new_len] = '\0';
+                    para->content = new_content;
+                    para->content_len = new_len;
+                }
+            } else {
+                char *para_content = trim_string(line_copy, line_len);
+                para = create_block_node(MD_NODE_PARAGRAPH, para_content, strlen(para_content));
+                if (para) {
+                    md_node_add_child(root, para);
+                    last_block = para;
+                }
+                free(para_content);
             }
         }
         
         free(line_copy);
         
-        while (line_end < md + len && (*line_end == '\n' || *line_end == '\r')) line_end++;
+        if (line_end < md + len) {
+            if (*line_end == '\r' && line_end + 1 < md + len && line_end[1] == '\n') {
+                line_end += 2;
+            } else if (*line_end == '\n' || *line_end == '\r') {
+                line_end++;
+            }
+        }
         line_start = line_end;
         line_num++;
     }

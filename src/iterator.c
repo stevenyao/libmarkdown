@@ -31,6 +31,7 @@ static void node_to_element(const md_node_t *node, md_element_t *elem) {
             elem->data.block.list_start = node->data.block.list_start;
             elem->data.block.list_marker = node->data.block.list_marker;
             elem->data.block.is_task = node->data.block.is_task;
+            elem->data.block.is_checked = node->data.block.is_checked;
             break;
         case MD_NODE_LINK:
         case MD_NODE_IMAGE:
@@ -89,15 +90,20 @@ md_element_t *md_iterator_next(md_iterator_t *iter) {
         } else if (iter->current->next) {
             iter->current = iter->current->next;
         } else {
-            while (iter->current->parent && iter->current->parent != iter->doc->root) {
+            // Go up the tree looking for a next sibling
+            while (iter->current->parent) {
                 if (iter->current->parent->next) {
                     iter->current = iter->current->parent->next;
                     break;
                 }
                 iter->current = iter->current->parent;
+                if (iter->current == iter->doc->root) {
+                    // Reached root, no more nodes
+                    iter->current = NULL;
+                    return NULL;
+                }
             }
-            if (!iter->current->parent || (iter->current->parent == iter->doc->root && !iter->current->next)) {
-                iter->current = NULL;
+            if (!iter->current) {
                 return NULL;
             }
         }

@@ -12,6 +12,7 @@ static int tests_failed = 0;
     printf("Running %s... ", #name); \
     test_##name(); \
     printf("PASSED\n"); \
+    tests_passed++; \
 } while(0)
 
 #define ASSERT(cond, msg) do { \
