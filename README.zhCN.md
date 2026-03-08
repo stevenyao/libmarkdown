@@ -67,8 +67,9 @@ build_cmake.bat
 build_msbuild.bat
 
 # 运行测试程序（170 个测试）
+# 构建并运行测试（170 个测试）
 # 从 Visual Studio Developer Command Prompt 运行
-run_example.bat
+build_cmake.bat
 ```
 
 ### CMake（跨平台）
@@ -119,8 +120,7 @@ libmarkdown/
 ├── CMakeLists.txt           # CMake 配置文件
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake 构建脚本
-├── build_msbuild.bat      # Windows MSBuild 构建脚本
-└── run_example.bat        # 运行测试示例
+└── build_cmake.bat        # Windows CMake 构建脚本
 ```
 
 ## 使用方法

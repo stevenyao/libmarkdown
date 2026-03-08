@@ -68,9 +68,9 @@ build_cmake.bat
 # Run from Visual Studio Developer Command Prompt
 build_msbuild.bat
 
-# Run test program (170 tests)
+# Build and run tests (170 tests)
 # Run from Visual Studio Developer Command Prompt
-run_example.bat
+build_cmake.bat
 ```
 
 ### CMake (Cross-platform)
@@ -121,8 +121,7 @@ libmarkdown/
 ├── CMakeLists.txt           # CMake configuration
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake build script
-├── build_msbuild.bat      # Windows MSBuild build script
-└── run_example.bat        # Run test example
+└── build_cmake.bat        # Windows CMake build script
 ```
 
 ## Usage
