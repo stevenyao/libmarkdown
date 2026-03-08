@@ -107,8 +107,6 @@ TEST(ast_node_operations) {
     ASSERT(child->next == child2, "sibling link");
     ASSERT(child2->prev == child, "prev link");
     
-    md_node_free(child2);
-    md_node_free(child);
     md_node_free(node);
     
     tests_passed++;
