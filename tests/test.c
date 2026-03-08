@@ -310,7 +310,7 @@ TEST(parser_parse_thematic_break_short) {
 }
 
 TEST(parser_parse_thematic_break_with_spaces) {
-    md_document_t *doc = md_parse("- - - - -", 10);
+    md_document_t *doc = md_parse("- - - - -", 9);
     ASSERT(doc != NULL, "parse spaced break");
     
     md_iterator_t *iter = md_iterator_create(doc);
