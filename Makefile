@@ -6,14 +6,15 @@ SRC = src/error.c src/ast.c src/iterator.c src/document.c src/parser.c src/extra
 OBJ = $(SRC:src/%.c=bin/%.o)
 TARGET = bin/libmarkdown.a
 TEST_BIN = bin/test
+EXAMPLE_BIN = bin/example
 
 COV_OBJ = $(SRC:src/%.c=bin/cov/%.o)
 COV_TARGET = bin/cov/libmarkdown.a
 COV_TEST_BIN = bin/cov/test
 
-.PHONY: all clean test coverage
+.PHONY: all clean test example coverage
 
-all: | bin $(TARGET)
+all: | bin $(TARGET) example
 
 bin:
 	mkdir -p bin
@@ -29,11 +30,16 @@ bin/%.o: src/%.c
 
 clean:
 	rm -rf bin/cov
-	rm -f $(OBJ) $(TARGET) $(TEST_BIN) bin/*.gcda bin/*.gcno bin/*.gcov
+	rm -f $(OBJ) $(TARGET) $(TEST_BIN) $(EXAMPLE_BIN) bin/*.gcda bin/*.gcno bin/*.gcov
 
 test: $(TARGET)
 	$(CC) $(CFLAGS) -o $(TEST_BIN) tests/test.c $(TARGET)
 	$(TEST_BIN)
+
+example: $(TARGET)
+	$(CC) $(CFLAGS) -o $(EXAMPLE_BIN) examples/example.c $(TARGET)
+	@echo "Example program built: $(EXAMPLE_BIN)"
+	@echo "Run with: ./$(EXAMPLE_BIN)"
 
 coverage: bin/cov $(COV_TARGET)
 	$(CC) -Wall -Wextra -std=c11 -O0 -Iinclude --coverage -o $(COV_TEST_BIN) tests/test.c $(COV_TARGET) --coverage
