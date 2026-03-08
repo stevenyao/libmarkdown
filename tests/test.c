@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1051,7 +1052,6 @@ TEST(document_visit) {
 TEST(document_visit_early_exit) {
     md_document_t *doc = md_parse("# H1\n\n# H2\n\n# H3", 23);
     
-    int count = 0;
     int callback(const md_node_t *node, void *data) {
         (void)node;
         int *c = (int *)data;

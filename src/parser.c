@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -81,7 +82,7 @@ static int is_thematic_break(const char *line, size_t len) {
 static int is_fenced_code_start(const char *line, size_t len) {
     if (len < 3) return 0;
     if (line[0] != '`' && line[0] != '~') return 0;
-    int count = 1;
+    size_t count = 1;
     while (count < len && line[count] == line[0]) count++;
     return count >= 3;
 }
