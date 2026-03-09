@@ -104,7 +104,7 @@ libmarkdown/
 │   ├── test.c                # Test suite (170+ tests)
 │   └── sample.md             # Test document
 ├── examples/                 # Example programs
-│   └── example.c             # Simple usage example
+│   └── mdtools.c             # CLI tool to parse markdown files
 ├── doc/                      # Documentation
 │   ├── design.md             # Design documentation
 │   └── prompt.md             # Development prompts
@@ -117,7 +117,7 @@ libmarkdown/
 │       ├── markdown.exp      # Export file
 │       ├── test_markdown.exe # Test program (170 tests)
 │       └── examples/
-│           └── example.exe        # Example program
+│           └── mdtools.exe        # Example program
 ├── CMakeLists.txt           # CMake configuration
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake build script

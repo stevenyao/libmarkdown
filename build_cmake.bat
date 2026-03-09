@@ -40,7 +40,7 @@ echo.
 echo Build successful!
 echo DLL: bin\Release\markdown.dll
 echo Test executable: bin\Release\test_markdown.exe
-echo Example program: bin\Release\example.exe
+echo Tools program: bin\Release\mdtools.exe
 echo.
 echo To use the library:
 echo 1. Copy markdown.dll to your application directory

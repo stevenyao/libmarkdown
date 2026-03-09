@@ -103,7 +103,7 @@ libmarkdown/
 │   ├── test.c                # 测试套件（170+ 测试）
 │   └── sample.md             # 测试文档
 ├── examples/                 # 示例程序
-│   └── example.c             # 简单使用示例
+│   └── mdtools.c             # 简单使用示例
 ├── doc/                      # 设计文档
 │   ├── design.md             # 设计文档
 │   └── prompt.md             # 开发提示
@@ -116,7 +116,7 @@ libmarkdown/
 │       ├── markdown.exp      # 导出文件
 │       ├── test_markdown.exe # 测试程序（170 个测试）
 │       └── examples/
-│           └── example.exe        # 示例程序
+│           └── mdtools.exe        # 示例程序
 ├── CMakeLists.txt           # CMake 配置文件
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake 构建脚本

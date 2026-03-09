@@ -90,11 +90,11 @@ endif()
 # 示例程序
 option(BUILD_EXAMPLES "Build example programs" ON)
 if(BUILD_EXAMPLES)
-    add_executable(example examples/example.c)
-    target_link_libraries(example markdown)
+    add_executable(mdtools examples/mdtools.c)
+    target_link_libraries(mdtools markdown)
     
     # 设置示例程序输出到项目根目录的bin/Release/examples
-    set_target_properties(example PROPERTIES
+    set_target_properties(mdtools PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin/Debug
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin/Release
         RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_SOURCE_DIR}/bin/RelWithDebInfo
@@ -103,7 +103,7 @@ if(BUILD_EXAMPLES)
     
     # Windows DLL配置
     if(WIN32 AND BUILD_SHARED_LIBS)
-        target_compile_definitions(example PRIVATE MARKDOWN_DLL)
+        target_compile_definitions(mdtools PRIVATE MARKDOWN_DLL)
     endif()
 endif()
 
