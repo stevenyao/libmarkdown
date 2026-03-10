@@ -87,15 +87,26 @@ int main() {
 ```c
 // 解析器选项
 typedef struct md_parser_options {
-    int parse_yaml_front_matter;
-    int parse_footnotes;
-    int parse_table;
-    int parse_task_list;
-    int parse_strikethrough;
-    int parse_autolink;
-    int parse_html;
+    bool parse_yaml_front_matter;
+    bool parse_footnotes;
+    bool parse_table;
+    bool parse_task_list;
+    bool parse_strikethrough;
+    bool parse_autolink;
+    bool parse_html;
     size_t max_nesting;
 } md_parser_options_t;
+
+#define MD_PARSER_OPTIONS_DEFAULT { \
+    .parse_yaml_front_matter = false, \
+    .parse_footnotes = false,         \
+    .parse_table = true,              \
+    .parse_task_list = true,          \
+    .parse_strikethrough = true,      \
+    .parse_autolink = true,           \
+    .parse_html = true,               \
+    .max_nesting = 16                 \
+}
 
 // 使用默认选项解析
 md_document_t *md_parse(const char *md, size_t len);
@@ -128,8 +139,8 @@ typedef struct md_element {
             char *language;
             int list_start;
             char list_marker;
-            int is_task;
-            int is_checked;
+            bool is_task;
+            bool is_checked;
         } block;
         
         struct {
@@ -250,8 +261,8 @@ typedef struct md_node {
             char list_marker;   // 列表标记字符
             md_list_type_t list_type;      // 列表类型
             md_list_delim_t list_delim;    // 列表分隔符
-            int is_task;        // 是否为任务列表
-            int is_checked;     // 任务是否完成
+            bool is_task;       // 是否为任务列表
+            bool is_checked;    // 任务是否完成
             md_table_align_t table_align;  // 表格对齐方式
         } block;
         
@@ -500,9 +511,13 @@ md_iterator_destroy(iter);
 
 - [x] 完善行内元素解析
 - [x] 支持表格完整解析
+- [x] 支持任务列表 (GFM)
+- [x] 支持删除线 (GFM)
+- [x] 支持自动链接
+- [x] 支持 HTML 解析
+- [x] 支持 YAML 前置元数据
 - [ ] 添加 AST 修改 API
 - [ ] 支持输出 HTML
 - [ ] 性能优化
 - [ ] 内存池优化
-- [ ] 支持更多 GFM 扩展
 - [ ] 添加序列化/反序列化 API

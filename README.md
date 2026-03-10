@@ -108,6 +108,7 @@ libmarkdown/
 ├── doc/                      # Documentation
 │   ├── design.md             # Design documentation
 │   └── prompt.md             # Development prompts
+├── AGENTS.md                 # AI agent guidelines
 ├── cmake/                    # CMake configuration
 │   └── markdown-config.cmake.in
 ├── bin/                      # Build output directory
@@ -121,7 +122,7 @@ libmarkdown/
 ├── CMakeLists.txt           # CMake configuration
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake build script
-└── build_cmake.bat        # Windows CMake build script
+└── AGENTS.md              # AI agent guidelines
 ```
 
 ## Usage

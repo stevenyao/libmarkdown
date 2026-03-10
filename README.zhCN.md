@@ -107,6 +107,7 @@ libmarkdown/
 ├── doc/                      # 设计文档
 │   ├── design.md             # 设计文档
 │   └── prompt.md             # 开发提示
+├── AGENTS.md                 # AI 代理指南
 ├── cmake/                    # CMake 配置
 │   └── markdown-config.cmake.in
 ├── bin/                      # 编译输出目录
@@ -120,7 +121,7 @@ libmarkdown/
 ├── CMakeLists.txt           # CMake 配置文件
 ├── Makefile                 # Linux Makefile
 ├── build_cmake.bat        # Windows CMake 构建脚本
-└── build_cmake.bat        # Windows CMake 构建脚本
+└── AGENTS.md              # AI 代理指南
 ```
 
 ## 使用方法
