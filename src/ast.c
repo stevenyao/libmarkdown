@@ -30,5 +30,28 @@ void md_node_free(md_node_t *node) {
     }
     
     if (node->content) free(node->content);
+    
+    switch (node->type) {
+    case MD_NODE_FENCED_CODE:
+    case MD_NODE_INDENTED_CODE:
+        free(node->data.block.language);
+        free(node->data.block.info_string);
+        free(node->data.block.raw_html);
+        break;
+    case MD_NODE_LINK:
+    case MD_NODE_AUTOLINK:
+    case MD_NODE_EMAIL_AUTOLINK:
+        free(node->data.inline_.url);
+        free(node->data.inline_.title);
+        break;
+    case MD_NODE_IMAGE:
+        free(node->data.inline_.url);
+        free(node->data.inline_.title);
+        free(node->data.inline_.alt);
+        break;
+    default:
+        break;
+    }
+    
     free(node);
 }

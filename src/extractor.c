@@ -88,13 +88,10 @@ int md_extract_code_blocks(const md_document_t *doc, md_code_block_t **blocks, s
         return -1;
     }
     
-    size_t indented_count = 0;
-    if (collect_nodes(doc->root, MD_NODE_INDENTED_CODE, &nodes, &indented_count, &capacity) < 0) {
+    if (collect_nodes(doc->root, MD_NODE_INDENTED_CODE, &nodes, count, &capacity) < 0) {
         free(nodes);
         return -1;
     }
-    
-    *count += indented_count;
     
     if (*count == 0) return 0;
     
@@ -261,6 +258,12 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
         if (collect_nodes(table_node, MD_NODE_TABLE_ROW, &rows, &r_count, &r_cap) == 0 && r_count > 0) {
             tbl->row_count = r_count;
             tbl->rows = (char ***)malloc(r_count * sizeof(char **));
+            if (!tbl->rows) {
+                tbl->row_count = 0;
+                free(rows);
+                continue;
+            }
+            memset(tbl->rows, 0, r_count * sizeof(char **));
             
             size_t max_cols = 0;
             for (size_t r = 0; r < r_count; r++) {
@@ -274,10 +277,10 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
             }
             tbl->col_count = max_cols;
             
-            tbl->aligns = (md_table_align_t *)malloc(max_cols * sizeof(md_table_align_t));
-            if (tbl->aligns) {
-                 memset(tbl->aligns, 0, max_cols * sizeof(md_table_align_t));
-                 if (r_count > 0) {
+            if (max_cols > 0) {
+                tbl->aligns = (md_table_align_t *)malloc(max_cols * sizeof(md_table_align_t));
+                if (tbl->aligns) {
+                     memset(tbl->aligns, 0, max_cols * sizeof(md_table_align_t));
                      md_node_t *cell = rows[0]->first_child;
                      size_t c = 0;
                      while (cell && c < max_cols) {
@@ -287,23 +290,21 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
                          }
                          cell = cell->next;
                      }
-                 }
+                }
             }
 
-            if (tbl->rows) {
-                for (size_t r = 0; r < r_count; r++) {
-                    tbl->rows[r] = (char **)malloc(max_cols * sizeof(char *));
-                    if (tbl->rows[r]) {
-                        memset(tbl->rows[r], 0, max_cols * sizeof(char *));
-                        md_node_t *cell = rows[r]->first_child;
-                        size_t c = 0;
-                        while (cell && c < max_cols) {
-                            if (cell->type == MD_NODE_TABLE_CELL) {
-                                tbl->rows[r][c] = extract_node_text(cell);
-                                c++;
-                            }
-                            cell = cell->next;
+            for (size_t r = 0; r < r_count; r++) {
+                tbl->rows[r] = (char **)malloc(max_cols * sizeof(char *));
+                if (tbl->rows[r]) {
+                    memset(tbl->rows[r], 0, max_cols * sizeof(char *));
+                    md_node_t *cell = rows[r]->first_child;
+                    size_t c = 0;
+                    while (cell && c < max_cols) {
+                        if (cell->type == MD_NODE_TABLE_CELL) {
+                            tbl->rows[r][c] = extract_node_text(cell);
+                            c++;
                         }
+                        cell = cell->next;
                     }
                 }
             }

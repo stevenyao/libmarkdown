@@ -32,8 +32,16 @@ static int tests_failed = 0;
 } while(0)
 
 #define ASSERT_EQ_STR(a, b, msg) do { \
-    if (strcmp(a, b) != 0) { \
-        printf("FAILED: %s (got '%s'[%zu], expected '%s'[%zu])\n", msg, a, strlen(a), b, strlen(b)); \
+    const char *_a = (a); \
+    const char *_b = (b); \
+    if (_a == NULL || _b == NULL) { \
+        if (_a != _b) { \
+            printf("FAILED: %s (got %s, expected %s)\n", msg, _a ? _a : "NULL", _b ? _b : "NULL"); \
+            tests_failed++; \
+            return; \
+        } \
+    } else if (strcmp(_a, _b) != 0) { \
+        printf("FAILED: %s (got '%s'[%zu], expected '%s'[%zu])\n", msg, _a, strlen(_a), _b, strlen(_b)); \
         tests_failed++; \
         return; \
     } \
@@ -68,13 +76,11 @@ TEST(error_string) {
     md_error_set(&err, MD_ERROR_MEMORY, 1, 1, NULL);
     ASSERT_EQ_STR("", err.message, "error set NULL message");
     
-    tests_passed++;
 }
 
 TEST(error_null_operations) {
     md_error_init(NULL);
     md_error_set(NULL, MD_ERROR_NONE, 0, 0, NULL);
-    tests_passed++;
 }
 
 /* ==================== AST Tests ==================== */
@@ -110,7 +116,6 @@ TEST(ast_node_operations) {
     
     md_node_free(node);
     
-    tests_passed++;
 }
 
 TEST(ast_node_free_with_content) {
@@ -126,13 +131,11 @@ TEST(ast_node_free_with_content) {
     md_node_add_child(node, child);
     
     md_node_free(node);
-    tests_passed++;
 }
 
 TEST(ast_null_operations) {
     md_node_add_child(NULL, NULL);
     md_node_free(NULL);
-    tests_passed++;
 }
 
 /* ==================== Parser Tests ==================== */
@@ -147,7 +150,6 @@ TEST(parser_create_destroy) {
     ASSERT(parser != NULL, "parser create NULL");
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_null) {
@@ -164,7 +166,6 @@ TEST(parser_parse_null) {
     ASSERT_EQ_INT(-1, ret, "parse NULL doc");
     
     md_parser_destroy(parser);
-    tests_passed++;
 }
 
 TEST(parser_parse_basic) {
@@ -196,7 +197,6 @@ TEST(parser_parse_basic) {
     md_document_free(doc);
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_memory_error) {
@@ -211,7 +211,6 @@ TEST(parser_parse_memory_error) {
     md_document_free(doc);
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_headings) {
@@ -232,7 +231,6 @@ TEST(parser_parse_headings) {
     md_headings_free(headings, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_headings_no_space) {
@@ -251,7 +249,6 @@ TEST(parser_parse_headings_no_space) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_headings_7) {
@@ -259,7 +256,6 @@ TEST(parser_parse_headings_7) {
     ASSERT(doc != NULL, "parse H7");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_headings_trailing) {
@@ -278,7 +274,6 @@ TEST(parser_parse_headings_trailing) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_thematic_break) {
@@ -299,7 +294,6 @@ TEST(parser_parse_thematic_break) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_thematic_break_short) {
@@ -320,7 +314,6 @@ TEST(parser_parse_thematic_break_short) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_thematic_break_with_spaces) {
@@ -341,7 +334,6 @@ TEST(parser_parse_thematic_break_with_spaces) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_fenced_code) {
@@ -356,7 +348,6 @@ TEST(parser_parse_fenced_code) {
     md_code_blocks_free(blocks, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_fenced_code_tilde) {
@@ -377,7 +368,6 @@ TEST(parser_parse_fenced_code_tilde) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_fenced_code_short) {
@@ -398,7 +388,6 @@ TEST(parser_parse_fenced_code_short) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_fenced_code_with_info) {
@@ -419,7 +408,6 @@ TEST(parser_parse_fenced_code_with_info) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_indented_code) {
@@ -440,7 +428,6 @@ TEST(parser_parse_indented_code) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_blockquote) {
@@ -461,7 +448,6 @@ TEST(parser_parse_blockquote) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_blockquote_empty) {
@@ -482,7 +468,6 @@ TEST(parser_parse_blockquote_empty) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_blockquote_multiline) {
@@ -490,7 +475,6 @@ TEST(parser_parse_blockquote_multiline) {
     ASSERT(doc != NULL, "parse multiline blockquote");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_unordered) {
@@ -511,7 +495,6 @@ TEST(parser_parse_list_unordered) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_plus) {
@@ -532,7 +515,6 @@ TEST(parser_parse_list_plus) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_asterisk) {
@@ -553,7 +535,6 @@ TEST(parser_parse_list_asterisk) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_ordered) {
@@ -574,7 +555,6 @@ TEST(parser_parse_list_ordered) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_paren) {
@@ -595,7 +575,6 @@ TEST(parser_parse_list_paren) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_ordered_multi_digit) {
@@ -616,7 +595,6 @@ TEST(parser_parse_list_ordered_multi_digit) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_task_list) {
@@ -642,7 +620,6 @@ TEST(parser_parse_task_list) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_task_list_invalid) {
@@ -664,7 +641,6 @@ TEST(parser_parse_task_list_invalid) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_task_list_with_space) {
@@ -685,7 +661,6 @@ TEST(parser_parse_task_list_with_space) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_paragraph) {
@@ -706,7 +681,6 @@ TEST(parser_parse_paragraph) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_complex) {
@@ -739,7 +713,6 @@ TEST(parser_parse_complex) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_empty) {
@@ -751,7 +724,6 @@ TEST(parser_parse_empty) {
     ASSERT(doc != NULL, "parse only newlines");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_only_spaces) {
@@ -759,7 +731,6 @@ TEST(parser_parse_only_spaces) {
     ASSERT(doc != NULL, "parse only spaces");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_multiline_paragraph) {
@@ -780,7 +751,6 @@ TEST(parser_parse_multiline_paragraph) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_multiple_paragraphs) {
@@ -801,7 +771,6 @@ TEST(parser_parse_multiple_paragraphs) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_marker_invalid) {
@@ -813,7 +782,6 @@ TEST(parser_parse_list_marker_invalid) {
     ASSERT(doc != NULL, "parse just 1.");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_crlf) {
@@ -834,7 +802,6 @@ TEST(parser_parse_crlf) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_setext_heading) {
@@ -855,7 +822,6 @@ TEST(parser_parse_setext_heading) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_setext_h2) {
@@ -863,7 +829,6 @@ TEST(parser_parse_setext_h2) {
     ASSERT(doc != NULL, "parse setext H2");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_leading_tab) {
@@ -871,7 +836,6 @@ TEST(parser_parse_leading_tab) {
     ASSERT(doc != NULL, "parse leading tab");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_list_consecutive) {
@@ -893,7 +857,6 @@ TEST(parser_parse_list_consecutive) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_mixed_content) {
@@ -916,7 +879,6 @@ TEST(parser_parse_mixed_content) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 /* ==================== Iterator Tests ==================== */
@@ -932,7 +894,6 @@ TEST(iterator_create_destroy) {
     iter = md_iterator_create(NULL);
     ASSERT(iter == NULL, "iterator NULL doc");
     
-    tests_passed++;
 }
 
 TEST(iterator_reset) {
@@ -949,7 +910,6 @@ TEST(iterator_reset) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(iterator_traverse) {
@@ -971,7 +931,6 @@ TEST(iterator_traverse) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(iterator_traverse_all_types) {
@@ -996,7 +955,6 @@ TEST(iterator_traverse_all_types) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(iterator_empty_doc) {
@@ -1009,14 +967,12 @@ TEST(iterator_empty_doc) {
     md_iterator_destroy(iter);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 /* ==================== Document Tests ==================== */
 
 TEST(document_free_null) {
     md_document_free(NULL);
-    tests_passed++;
 }
 
 TEST(document_get_source) {
@@ -1032,7 +988,6 @@ TEST(document_get_source) {
     ASSERT(NULL == md_document_get_source(NULL), "NULL doc source");
     ASSERT_EQ_INT(0, (int)md_document_get_source_len(NULL), "NULL doc source len");
     
-    tests_passed++;
 }
 
 static int test_visit_callback(const md_node_t *node, void *data) {
@@ -1059,7 +1014,6 @@ TEST(document_visit) {
     
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 static int test_visit_early_exit_callback(const md_node_t *node, void *data) {
@@ -1078,7 +1032,6 @@ TEST(document_visit_early_exit) {
     
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(node_type_name) {
@@ -1090,7 +1043,6 @@ TEST(node_type_name) {
     ASSERT_EQ_STR("image", md_node_type_name(MD_NODE_IMAGE), "image");
     ASSERT_EQ_STR("unknown", md_node_type_name(999), "unknown");
     
-    tests_passed++;
 }
 
 /* ==================== Extractor Tests ==================== */
@@ -1119,7 +1071,6 @@ TEST(extractor_headings) {
     md_headings_free(headings, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_headings_null) {
@@ -1134,7 +1085,6 @@ TEST(extractor_headings_null) {
     
     md_headings_free(NULL, 0);
     
-    tests_passed++;
 }
 
 TEST(extractor_headings_empty) {
@@ -1149,7 +1099,6 @@ TEST(extractor_headings_empty) {
     md_headings_free(headings, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_code_blocks) {
@@ -1175,7 +1124,6 @@ TEST(extractor_code_blocks) {
     md_code_blocks_free(blocks, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_code_blocks_null) {
@@ -1187,7 +1135,6 @@ TEST(extractor_code_blocks_null) {
     
     md_code_blocks_free(NULL, 0);
     
-    tests_passed++;
 }
 
 TEST(extractor_code_blocks_empty) {
@@ -1202,7 +1149,6 @@ TEST(extractor_code_blocks_empty) {
     md_code_blocks_free(blocks, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_links) {
@@ -1222,7 +1168,6 @@ TEST(extractor_links) {
     md_links_free(links, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_links_null) {
@@ -1234,7 +1179,6 @@ TEST(extractor_links_null) {
     
     md_links_free(NULL, 0);
     
-    tests_passed++;
 }
 
 TEST(extractor_links_multiple) {
@@ -1248,7 +1192,6 @@ TEST(extractor_links_multiple) {
     md_links_free(links, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_images) {
@@ -1263,7 +1206,6 @@ TEST(extractor_images) {
     md_images_free(images, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_images_null) {
@@ -1275,7 +1217,6 @@ TEST(extractor_images_null) {
     
     md_images_free(NULL, 0);
     
-    tests_passed++;
 }
 
 TEST(extractor_tables) {
@@ -1290,7 +1231,6 @@ TEST(extractor_tables) {
     md_tables_free(tables, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_tables_null) {
@@ -1302,7 +1242,6 @@ TEST(extractor_tables_null) {
     
     md_tables_free(NULL, 0);
     
-    tests_passed++;
 }
 
 TEST(extractor_plain_text) {
@@ -1317,7 +1256,6 @@ TEST(extractor_plain_text) {
     
     ASSERT(NULL == md_extract_plain_text(NULL), "NULL doc plain text");
     
-    tests_passed++;
 }
 
 TEST(extractor_plain_text_with_heading) {
@@ -1330,7 +1268,6 @@ TEST(extractor_plain_text_with_heading) {
     free(text);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_plain_text_empty) {
@@ -1341,7 +1278,6 @@ TEST(extractor_plain_text_empty) {
     free(text);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_plain_text_complex) {
@@ -1353,7 +1289,6 @@ TEST(extractor_plain_text_complex) {
     free(text);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 /* ==================== Parser Options Tests ==================== */
@@ -1369,7 +1304,6 @@ TEST(parser_options_default) {
     ASSERT(opts.parse_html == 1, "html default");
     ASSERT(opts.max_nesting == 16, "max nesting default");
     
-    tests_passed++;
 }
 
 TEST(parser_options_custom) {
@@ -1388,7 +1322,6 @@ TEST(parser_options_custom) {
     ASSERT(parser != NULL, "parser with custom opts");
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 /* ==================== File Parsing Tests ==================== */
@@ -1408,7 +1341,6 @@ TEST(parser_parse_file) {
     
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_get_error) {
@@ -1426,14 +1358,12 @@ TEST(parser_get_error) {
     
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_file_memory_error) {
     md_parser_t *parser = md_parser_create(NULL);
     md_parser_destroy(parser);
     
-    tests_passed++;
 }
 
 TEST(parser_parse_file_success) {
@@ -1473,7 +1403,6 @@ TEST(parser_parse_file_success) {
     
     remove(filename);
     
-    tests_passed++;
 }
 
 /* ==================== Edge Cases ==================== */
@@ -1493,7 +1422,6 @@ TEST(parser_special_characters) {
     ASSERT(doc != NULL, "nested quote");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_special_headings) {
@@ -1511,7 +1439,6 @@ TEST(parser_special_headings) {
     ASSERT(doc != NULL, "just hash");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_list_with_tab) {
@@ -1519,7 +1446,6 @@ TEST(parser_list_with_tab) {
     ASSERT(doc != NULL, "list with tab");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(iterator_null_operations) {
@@ -1534,7 +1460,6 @@ TEST(iterator_null_operations) {
     md_iterator_reset(NULL);
     md_iterator_destroy(NULL);
     
-    tests_passed++;
 }
 
 TEST(parser_edge_cases) {
@@ -1552,7 +1477,6 @@ TEST(parser_edge_cases) {
     ASSERT(doc != NULL, "bracket combo");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(parser_very_long_line) {
@@ -1565,7 +1489,6 @@ TEST(parser_very_long_line) {
     md_document_free(doc);
     free(long_line);
     
-    tests_passed++;
 }
 
 TEST(parser_many_newlines) {
@@ -1578,7 +1501,6 @@ TEST(parser_many_newlines) {
     md_document_free(doc);
     free(many_newlines);
     
-    tests_passed++;
 }
 
 /* ==================== Coverage Tests ==================== */
@@ -1639,7 +1561,6 @@ TEST(document_getters) {
     ASSERT(md_node_get_url(NULL) == NULL, "null url");
     
     md_document_free(doc);
-    tests_passed++;
 }
 
 TEST(table_extraction_manual) {
@@ -1689,7 +1610,6 @@ TEST(table_extraction_manual) {
     md_tables_free(tables, count);
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(image_getter) {
@@ -1705,7 +1625,6 @@ TEST(image_getter) {
     ASSERT(md_node_get_title(img) == NULL, "image title null");
     
     md_document_free(doc);
-    tests_passed++;
 }
 
 TEST(parser_inline_edge_cases) {
@@ -1715,7 +1634,6 @@ TEST(parser_inline_edge_cases) {
     ASSERT(doc != NULL, "parse inline edges");
     // Just verify it doesn't crash and parse finishes
     md_document_free(doc);
-    tests_passed++;
 }
 
 TEST(parser_list_edge_cases) {
@@ -1740,7 +1658,6 @@ TEST(parser_list_edge_cases) {
     ASSERT(root_child != NULL && root_child->type == MD_NODE_LIST, "no space task is list");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 TEST(extractor_table_empty_content) {
@@ -1763,7 +1680,6 @@ TEST(extractor_table_empty_content) {
     
     md_tables_free(tables, count);
     md_document_free(doc);
-    tests_passed++;
 }
 
 TEST(parser_heading_whitespace) {
@@ -1783,7 +1699,6 @@ TEST(parser_heading_whitespace) {
     ASSERT_EQ_INT(MD_NODE_PARAGRAPH, h->type, "just hash is paragraph");
     md_document_free(doc);
     
-    tests_passed++;
 }
 
 /* ==================== Main ==================== */

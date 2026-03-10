@@ -5,6 +5,7 @@
 void md_document_free(md_document_t *doc) {
     if (!doc) return;
     if (doc->source) free(doc->source);
+    if (doc->link_refs) md_node_free(doc->link_refs);
     if (doc->root) md_node_free(doc->root);
     free(doc);
 }

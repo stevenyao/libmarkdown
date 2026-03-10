@@ -204,15 +204,22 @@ static void parse_inline_text(md_node_t *parent, const char *text, size_t len) {
                     size_t url_len = paren_end - paren_start - 1;
                     
                     char *content_str = (char*)malloc(content_len + 1);
+                    if (!content_str) { i++; continue; }
                     if (content_len > 0) memcpy(content_str, text + bracket_start + 1, content_len);
                     content_str[content_len] = 0;
                     
                     char *url_str = (char*)malloc(url_len + 1);
+                    if (!url_str) { free(content_str); i++; continue; }
                     if (url_len > 0) memcpy(url_str, text + paren_start + 1, url_len);
                     url_str[url_len] = 0;
                     
                     md_node_t *node = create_block_node(is_image ? MD_NODE_IMAGE : MD_NODE_LINK, content_str, content_len);
                     free(content_str);
+                    
+                    if (!node) {
+                        free(url_str);
+                        i++; continue;
+                    }
                     
                     if (is_image) {
                         node->data.inline_.alt = node->content ? strdup(node->content) : NULL;
@@ -346,13 +353,15 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
         
         if (heading_level > 0) {
             char *title = trim_string(line_copy + heading_level + 1, line_len - heading_level - 1);
-            md_node_t *heading = create_block_node(MD_NODE_HEADING, title, strlen(title));
-            if (heading) {
-                heading->data.block.heading_level = heading_level;
-                md_node_add_child(root, heading);
-                last_block = heading;
+            if (title) {
+                md_node_t *heading = create_block_node(MD_NODE_HEADING, title, strlen(title));
+                if (heading) {
+                    heading->data.block.heading_level = heading_level;
+                    md_node_add_child(root, heading);
+                    last_block = heading;
+                }
+                free(title);
             }
-            free(title);
         } else if (is_thematic_break(line_copy, line_len)) {
             md_node_t *hr = create_block_node(MD_NODE_THEMATIC_BREAK, NULL, 0);
             if (hr) {
@@ -379,7 +388,12 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
             }
             
             md_node_t *code = create_block_node(MD_NODE_FENCED_CODE, NULL, 0);
-            if (code) {
+            if (!code) {
+                free(lang);
+                free(line_copy);
+                continue;
+            }
+            {
                 code->data.block.language = lang;
                 md_node_add_child(root, code);
                 last_block = code;
@@ -484,18 +498,20 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                     code->content = code_content;
                     code->content_len = code_len;
                 }
-            }
+            } /* end code block */
             
             free(line_copy);
             continue;
         } else if (is_block_quote(line_copy, line_len)) {
             char *quote_content = trim_string(line_copy + 1, line_len - 1);
-            md_node_t *quote = create_block_node(MD_NODE_BLOCKQUOTE, quote_content, strlen(quote_content));
-            if (quote) {
-                md_node_add_child(root, quote);
-                last_block = quote;
+            if (quote_content) {
+                md_node_t *quote = create_block_node(MD_NODE_BLOCKQUOTE, quote_content, strlen(quote_content));
+                if (quote) {
+                    md_node_add_child(root, quote);
+                    last_block = quote;
+                }
+                free(quote_content);
             }
-            free(quote_content);
         } else if (is_list_marker(line_copy, line_len)) {
             md_node_type_t list_type = MD_NODE_LIST_ITEM;
             char marker = line_copy[0];
@@ -555,12 +571,14 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 }
             } else {
                 char *code_content = trim_string(line_copy, line_len);
-                code = create_block_node(MD_NODE_INDENTED_CODE, code_content, strlen(code_content));
-                if (code) {
-                    md_node_add_child(root, code);
-                    last_block = code;
+                if (code_content) {
+                    code = create_block_node(MD_NODE_INDENTED_CODE, code_content, strlen(code_content));
+                    if (code) {
+                        md_node_add_child(root, code);
+                        last_block = code;
+                    }
+                    free(code_content);
                 }
-                free(code_content);
             }
         } else if (line_len == 0) {
             last_block = NULL;
@@ -580,12 +598,14 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                 }
             } else {
                 char *para_content = trim_string(line_copy, line_len);
-                para = create_block_node(MD_NODE_PARAGRAPH, para_content, strlen(para_content));
-                if (para) {
-                    md_node_add_child(root, para);
-                    last_block = para;
+                if (para_content) {
+                    para = create_block_node(MD_NODE_PARAGRAPH, para_content, strlen(para_content));
+                    if (para) {
+                        md_node_add_child(root, para);
+                        last_block = para;
+                    }
+                    free(para_content);
                 }
-                free(para_content);
             }
         }
         
