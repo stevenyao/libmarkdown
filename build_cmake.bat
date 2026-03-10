@@ -10,7 +10,18 @@ cd build
 
 REM Configure CMake
 echo Configuring CMake...
-cmake .. -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
+
+set GENERATOR="Visual Studio 17 2022"
+if "%VisualStudioVersion:~0,2%"=="16" (
+    set GENERATOR="Visual Studio 16 2019"
+) else if "%VisualStudioVersion:~0,2%"=="17" (
+    set GENERATOR="Visual Studio 17 2022"
+) else (
+    echo Visual Studio version not detected via Developer Command Prompt.
+    echo Defaulting to Visual Studio 17 2022...
+)
+
+cmake .. -G %GENERATOR% -A x64 -DBUILD_SHARED_LIBS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
 if errorlevel 1 (
     echo CMake configuration failed.
     pause
