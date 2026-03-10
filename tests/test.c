@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,16 +87,14 @@ TEST(error_null_operations) {
 /* ==================== AST Tests ==================== */
 
 TEST(ast_node_operations) {
-    md_node_t *node = (md_node_t *)malloc(sizeof(md_node_t));
+    md_node_t *node = (md_node_t *)calloc(1, sizeof(md_node_t));
     ASSERT(node != NULL, "node create");
     
-    memset(node, 0, sizeof(md_node_t));
     node->type = MD_NODE_PARAGRAPH;
     node->content = strdup("test content");
     node->content_len = 12;
     
-    md_node_t *child = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(child, 0, sizeof(md_node_t));
+    md_node_t *child = (md_node_t *)calloc(1, sizeof(md_node_t));
     child->type = MD_NODE_TEXT;
     child->content = strdup("child text");
     
@@ -106,8 +105,7 @@ TEST(ast_node_operations) {
     ASSERT(child->prev == NULL, "first child prev");
     ASSERT(child->next == NULL, "first child next");
     
-    md_node_t *child2 = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(child2, 0, sizeof(md_node_t));
+    md_node_t *child2 = (md_node_t *)calloc(1, sizeof(md_node_t));
     child2->type = MD_NODE_TEXT;
     md_node_add_child(node, child2);
     ASSERT(node->last_child == child2, "last child updated");
@@ -119,13 +117,11 @@ TEST(ast_node_operations) {
 }
 
 TEST(ast_node_free_with_content) {
-    md_node_t *node = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(node, 0, sizeof(md_node_t));
+    md_node_t *node = (md_node_t *)calloc(1, sizeof(md_node_t));
     node->type = MD_NODE_PARAGRAPH;
     node->content = strdup("test");
     
-    md_node_t *child = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(child, 0, sizeof(md_node_t));
+    md_node_t *child = (md_node_t *)calloc(1, sizeof(md_node_t));
     child->type = MD_NODE_TEXT;
     child->content = strdup("child");
     md_node_add_child(node, child);
@@ -1295,13 +1291,13 @@ TEST(extractor_plain_text_complex) {
 
 TEST(parser_options_default) {
     md_parser_options_t opts = MD_PARSER_OPTIONS_DEFAULT;
-    ASSERT(opts.parse_yaml_front_matter == 0, "yaml front matter default");
-    ASSERT(opts.parse_footnotes == 0, "footnotes default");
-    ASSERT(opts.parse_table == 1, "table default");
-    ASSERT(opts.parse_task_list == 1, "task list default");
-    ASSERT(opts.parse_strikethrough == 1, "strikethrough default");
-    ASSERT(opts.parse_autolink == 1, "autolink default");
-    ASSERT(opts.parse_html == 1, "html default");
+    ASSERT(opts.parse_yaml_front_matter == false, "yaml front matter default");
+    ASSERT(opts.parse_footnotes == false, "footnotes default");
+    ASSERT(opts.parse_table == true, "table default");
+    ASSERT(opts.parse_task_list == true, "task list default");
+    ASSERT(opts.parse_strikethrough == true, "strikethrough default");
+    ASSERT(opts.parse_autolink == true, "autolink default");
+    ASSERT(opts.parse_html == true, "html default");
     ASSERT(opts.max_nesting == 16, "max nesting default");
     
 }
@@ -1309,13 +1305,13 @@ TEST(parser_options_default) {
 TEST(parser_options_custom) {
     md_parser_options_t opts;
     memset(&opts, 0, sizeof(opts));
-    opts.parse_yaml_front_matter = 1;
-    opts.parse_footnotes = 1;
-    opts.parse_table = 0;
-    opts.parse_task_list = 0;
-    opts.parse_strikethrough = 0;
-    opts.parse_autolink = 0;
-    opts.parse_html = 0;
+    opts.parse_yaml_front_matter = true;
+    opts.parse_footnotes = true;
+    opts.parse_table = false;
+    opts.parse_task_list = false;
+    opts.parse_strikethrough = false;
+    opts.parse_autolink = false;
+    opts.parse_html = false;
     opts.max_nesting = 32;
     
     md_parser_t *parser = md_parser_create(&opts);
@@ -1565,28 +1561,23 @@ TEST(document_getters) {
 
 TEST(table_extraction_manual) {
     // Construct AST manually to test extractor fully
-    md_document_t *doc = (md_document_t *)malloc(sizeof(md_document_t));
-    memset(doc, 0, sizeof(md_document_t));
+    md_document_t *doc = (md_document_t *)calloc(1, sizeof(md_document_t));
     
-    md_node_t *root = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(root, 0, sizeof(md_node_t));
+    md_node_t *root = (md_node_t *)calloc(1, sizeof(md_node_t));
     root->type = MD_NODE_DOCUMENT;
     doc->root = root;
     
-    md_node_t *table = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(table, 0, sizeof(md_node_t));
+    md_node_t *table = (md_node_t *)calloc(1, sizeof(md_node_t));
     table->type = MD_NODE_TABLE;
     md_node_add_child(root, table);
     
     // Row 1
-    md_node_t *row1 = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(row1, 0, sizeof(md_node_t));
+    md_node_t *row1 = (md_node_t *)calloc(1, sizeof(md_node_t));
     row1->type = MD_NODE_TABLE_ROW;
     md_node_add_child(table, row1);
     
     // Cell 1
-    md_node_t *cell1 = (md_node_t *)malloc(sizeof(md_node_t));
-    memset(cell1, 0, sizeof(md_node_t));
+    md_node_t *cell1 = (md_node_t *)calloc(1, sizeof(md_node_t));
     cell1->type = MD_NODE_TABLE_CELL;
     cell1->content = strdup("cell1");
     cell1->content_len = 5;
@@ -1661,8 +1652,7 @@ TEST(parser_list_edge_cases) {
 }
 
 TEST(extractor_table_empty_content) {
-    md_document_t *doc = (md_document_t *)malloc(sizeof(md_document_t));
-    memset(doc, 0, sizeof(md_document_t));
+    md_document_t *doc = (md_document_t *)calloc(1, sizeof(md_document_t));
     doc->root = (md_node_t *)calloc(1, sizeof(md_node_t));
     doc->root->type = MD_NODE_DOCUMENT;
     

@@ -2,6 +2,7 @@
 #define MARKDOWN_AST_H
 
 #include "export.h"
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum md_node_type {
@@ -82,8 +83,8 @@ typedef struct md_node {
             char list_marker;
             md_list_type_t list_type;
             md_list_delim_t list_delim;
-            int is_task;
-            int is_checked;
+            bool is_task;
+            bool is_checked;
             md_table_align_t table_align;
         } block;
         struct {

@@ -3,6 +3,7 @@
 
 #include "export.h"
 #include "ast.h"
+#include <stdbool.h>
 
 MARKDOWN_API void md_document_free(md_document_t *doc);
 
@@ -25,8 +26,8 @@ MARKDOWN_API int md_node_get_heading_level(const md_node_t *node);
 MARKDOWN_API const char *md_node_get_code_language(const md_node_t *node);
 MARKDOWN_API int md_node_get_list_start(const md_node_t *node);
 MARKDOWN_API char md_node_get_list_marker(const md_node_t *node);
-MARKDOWN_API int md_node_is_task_list(const md_node_t *node);
-MARKDOWN_API int md_node_is_checked(const md_node_t *node);
+MARKDOWN_API bool md_node_is_task_list(const md_node_t *node);
+MARKDOWN_API bool md_node_is_checked(const md_node_t *node);
 
 MARKDOWN_API const char *md_node_get_url(const md_node_t *node);
 MARKDOWN_API const char *md_node_get_title(const md_node_t *node);

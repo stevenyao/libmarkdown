@@ -248,7 +248,7 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
         md_table_t *tbl = &(*tables)[i];
         md_node_t *table_node = nodes[i];
         
-        memset(tbl, 0, sizeof(md_table_t));
+        *tbl = (md_table_t){0};
         tbl->node = table_node;
         
         md_node_t **rows = NULL;
@@ -257,13 +257,12 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
         
         if (collect_nodes(table_node, MD_NODE_TABLE_ROW, &rows, &r_count, &r_cap) == 0 && r_count > 0) {
             tbl->row_count = r_count;
-            tbl->rows = (char ***)malloc(r_count * sizeof(char **));
+            tbl->rows = (char ***)calloc(r_count, sizeof(char **));
             if (!tbl->rows) {
                 tbl->row_count = 0;
                 free(rows);
                 continue;
             }
-            memset(tbl->rows, 0, r_count * sizeof(char **));
             
             size_t max_cols = 0;
             for (size_t r = 0; r < r_count; r++) {
@@ -278,9 +277,8 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
             tbl->col_count = max_cols;
             
             if (max_cols > 0) {
-                tbl->aligns = (md_table_align_t *)malloc(max_cols * sizeof(md_table_align_t));
+                tbl->aligns = (md_table_align_t *)calloc(max_cols, sizeof(md_table_align_t));
                 if (tbl->aligns) {
-                     memset(tbl->aligns, 0, max_cols * sizeof(md_table_align_t));
                      md_node_t *cell = rows[0]->first_child;
                      size_t c = 0;
                      while (cell && c < max_cols) {
@@ -294,9 +292,8 @@ int md_extract_tables(const md_document_t *doc, md_table_t **tables, size_t *cou
             }
 
             for (size_t r = 0; r < r_count; r++) {
-                tbl->rows[r] = (char **)malloc(max_cols * sizeof(char *));
+                tbl->rows[r] = (char **)calloc(max_cols, sizeof(char *));
                 if (tbl->rows[r]) {
-                    memset(tbl->rows[r], 0, max_cols * sizeof(char *));
                     md_node_t *cell = rows[r]->first_child;
                     size_t c = 0;
                     while (cell && c < max_cols) {

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../include/markdown/iterator.h"
@@ -6,13 +7,13 @@ struct md_iterator {
     const md_document_t *doc;
     md_node_t *current;
     md_element_t element;
-    int started;
+    bool started;
 };
 
 static void node_to_element(const md_node_t *node, md_element_t *elem) {
     if (!node || !elem) return;
     
-    memset(elem, 0, sizeof(md_element_t));
+    *elem = (md_element_t){0};
     
     elem->type = node->type;
     elem->content = node->content;
@@ -61,7 +62,7 @@ md_iterator_t *md_iterator_create(const md_document_t *doc) {
     
     iter->doc = doc;
     iter->current = NULL;
-    iter->started = 0;
+    iter->started = false;
     memset(&iter->element, 0, sizeof(md_element_t));
     
     return iter;
@@ -74,7 +75,7 @@ void md_iterator_destroy(md_iterator_t *iter) {
 void md_iterator_reset(md_iterator_t *iter) {
     if (iter) {
         iter->current = NULL;
-        iter->started = 0;
+        iter->started = false;
     }
 }
 
@@ -83,7 +84,7 @@ md_element_t *md_iterator_next(md_iterator_t *iter) {
     
     if (!iter->started) {
         iter->current = iter->doc->root ? iter->doc->root->first_child : NULL;
-        iter->started = 1;
+        iter->started = true;
     } else if (iter->current) {
         if (iter->current->first_child) {
             iter->current = iter->current->first_child;

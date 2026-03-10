@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../include/markdown/document.h"
@@ -88,13 +89,13 @@ char md_node_get_list_marker(const md_node_t *node) {
     return node ? node->data.block.list_marker : 0;
 }
 
-int md_node_is_task_list(const md_node_t *node) {
+bool md_node_is_task_list(const md_node_t *node) {
     return node && (node->type == MD_NODE_TASK_LIST_ITEM || 
            (node->type == MD_NODE_LIST && node->data.block.list_type == MD_LIST_TASK));
 }
 
-int md_node_is_checked(const md_node_t *node) {
-    return node && node->type == MD_NODE_TASK_LIST_ITEM ? node->data.block.is_checked : 0;
+bool md_node_is_checked(const md_node_t *node) {
+    return node && node->type == MD_NODE_TASK_LIST_ITEM ? node->data.block.is_checked : false;
 }
 
 const char *md_node_get_url(const md_node_t *node) {
@@ -167,6 +168,9 @@ static const char *type_names[] = {
     "superscript",
     "span"
 };
+
+static_assert(MD_NODE_SPAN + 1 == sizeof(type_names) / sizeof(type_names[0]),
+    "type_names array must match md_node_type_t enum count");
 
 const char *md_node_type_name(md_node_type_t type) {
     int idx = (int)type;

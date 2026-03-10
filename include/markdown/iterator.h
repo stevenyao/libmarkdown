@@ -3,6 +3,7 @@
 
 #include "export.h"
 #include "ast.h"
+#include <stdbool.h>
 
 typedef struct md_iterator md_iterator_t;
 
@@ -19,8 +20,8 @@ typedef struct md_element {
             char *language;
             int list_start;
             char list_marker;
-            int is_task;
-            int is_checked;
+            bool is_task;
+            bool is_checked;
         } block;
         
         struct {

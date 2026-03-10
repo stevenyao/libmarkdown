@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -9,7 +10,7 @@
 struct md_parser {
     md_parser_options_t opts;
     md_error_info_t error;
-    int parse_error;
+    bool parse_error;
 };
 
 md_parser_t *md_parser_create(const md_parser_options_t *opts) {
@@ -23,7 +24,7 @@ md_parser_t *md_parser_create(const md_parser_options_t *opts) {
     }
     
     md_error_init(&parser->error);
-    parser->parse_error = 0;
+    parser->parse_error = false;
     
     return parser;
 }
@@ -51,14 +52,13 @@ static md_document_t *create_document(const char *md, size_t len) {
     doc->source[len] = '\0';
     doc->source_len = len;
     
-    doc->root = (md_node_t *)malloc(sizeof(md_node_t));
+    doc->root = (md_node_t *)calloc(1, sizeof(md_node_t));
     if (!doc->root) {
         free(doc->source);
         free(doc);
         return NULL;
     }
     
-    memset(doc->root, 0, sizeof(md_node_t));
     doc->root->type = MD_NODE_DOCUMENT;
     doc->link_refs = NULL;
     
@@ -132,10 +132,9 @@ static int is_list_marker(const char *line, size_t len) {
 }
 
 static md_node_t *create_block_node(md_node_type_t type, const char *content, size_t len) {
-    md_node_t *node = (md_node_t *)malloc(sizeof(md_node_t));
+    md_node_t *node = (md_node_t *)calloc(1, sizeof(md_node_t));
     if (!node) return NULL;
     
-    memset(node, 0, sizeof(md_node_t));
     node->type = type;
     
     if (content && len > 0) {
@@ -179,7 +178,7 @@ static void parse_inline_text(md_node_t *parent, const char *text, size_t len) {
     while (i < len) {
         // Image ![alt](url) or Link [text](url)
         if (text[i] == '!' || text[i] == '[') {
-            int is_image = (text[i] == '!');
+            bool is_image = (text[i] == '!');
             size_t bracket_start = is_image ? i + 1 : i;
             
             if (is_image && (i + 1 >= len || text[i+1] != '[')) {
@@ -273,10 +272,10 @@ static void parse_inlines_recursive(md_node_t *node) {
     if (node->content && node->content_len > 0 && 
         (node->type == MD_NODE_PARAGRAPH || node->type == MD_NODE_HEADING)) {
         
-        int has_trigger = 0;
+        bool has_trigger = false;
         for (size_t i = 0; i < node->content_len; i++) {
             if (node->content[i] == '[' || node->content[i] == '`' || node->content[i] == '!') {
-                has_trigger = 1;
+                has_trigger = true;
                 break;
             }
         }
@@ -308,7 +307,7 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
     
     md_document_t *doc = create_document(md, len);
     if (!doc) {
-        parser->parse_error = 1;
+        parser->parse_error = true;
         md_error_set(&parser->error, MD_ERROR_MEMORY, 1, 1, "Failed to create document");
         return -1;
     }
@@ -322,7 +321,7 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
     const char *md_end = md + len;
     if (md_end < md) {
         md_document_free(doc);
-        parser->parse_error = 1;
+        parser->parse_error = true;
         md_error_set(&parser->error, MD_ERROR_MEMORY, 1, 1, "Input too large");
         return -1;
     }
@@ -334,16 +333,16 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
         
         if (line_len == SIZE_MAX) {
             md_document_free(doc);
-            parser->parse_error = 1;
-            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Line too long");
+        parser->parse_error = true;
+        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Line too long");
             return -1;
         }
         
         char *line_copy = (char *)malloc(line_len + 1);
         if (!line_copy) {
             md_document_free(doc);
-            parser->parse_error = 1;
-            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate line buffer");
+        parser->parse_error = true;
+        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate line buffer");
             return -1;
         }
         memcpy(line_copy, line_start, line_len);
@@ -420,26 +419,26 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                         free(code_content);
                         free(line_copy);
                         md_document_free(doc);
-                        parser->parse_error = 1;
-                        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code line");
+        parser->parse_error = true;
+        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code line");
                         return -1;
                     }
                     memcpy(content_line, line_start, content_len);
                     content_line[content_len] = '\0';
                     
                     if (content_len >= fence_len) {
-                        int is_closing = 1;
+                        bool is_closing = true;
                         for (size_t i = 0; i < fence_len; i++) {
                             if (content_line[i] != fence_char) {
-                                is_closing = 0;
+                                is_closing = false;
                                 break;
                             }
                         }
                         if (is_closing) {
-                            int only_fence = 1;
+                            bool only_fence = true;
                             for (size_t i = fence_len; i < content_len; i++) {
                                 if (content_line[i] != ' ' && content_line[i] != '\t') {
-                                    only_fence = 0;
+                                    only_fence = false;
                                     break;
                                 }
                             }
@@ -467,8 +466,8 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
                             free(code_content);
                             free(line_copy);
                             md_document_free(doc);
-                            parser->parse_error = 1;
-                            md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code content");
+        parser->parse_error = true;
+        md_error_set(&parser->error, MD_ERROR_MEMORY, line_num, 1, "Failed to allocate code content");
                             return -1;
                         }
                         code_content = new_content;
@@ -515,22 +514,22 @@ int md_parser_parse(md_parser_t *parser, const char *md, size_t len, md_document
         } else if (is_list_marker(line_copy, line_len)) {
             md_node_type_t list_type = MD_NODE_LIST_ITEM;
             char marker = line_copy[0];
-            int is_task = 0;
-            int is_checked = 0;
+            bool is_task = false;
+            bool is_checked = false;
             
             if (line_copy[0] >= '0' && line_copy[0] <= '9') {
                 list_type = MD_NODE_LIST_ITEM;
             } else if (line_len > 2 && line_copy[1] == '[' && line_copy[3] == ']') {
                 list_type = MD_NODE_TASK_LIST_ITEM;
-                is_task = 1;
-                if (line_copy[2] == 'x' || line_copy[2] == 'X') is_checked = 1;
+                is_task = true;
+                if (line_copy[2] == 'x' || line_copy[2] == 'X') is_checked = true;
             } else {
                 char *ptr = line_copy + 1;
                 while (*ptr == ' ' || *ptr == '\t') ptr++;
                 if (*ptr == '[' && ptr[1] != '\0' && ptr[2] == ']') {
                     list_type = MD_NODE_TASK_LIST_ITEM;
-                    is_task = 1;
-                    if (ptr[1] == 'x' || ptr[1] == 'X') is_checked = 1;
+                    is_task = true;
+                    if (ptr[1] == 'x' || ptr[1] == 'X') is_checked = true;
                 }
             }
             
@@ -635,7 +634,7 @@ int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_
     
     FILE *fp = fopen(filepath, "rb");
     if (!fp) {
-        parser->parse_error = 1;
+        parser->parse_error = true;
         md_error_set(&parser->error, MD_ERROR_FILE_OPEN, 1, 1, filepath);
         return -1;
     }
@@ -646,7 +645,7 @@ int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_
     
     if (size < 0) {
         fclose(fp);
-        parser->parse_error = 1;
+        parser->parse_error = true;
         md_error_set(&parser->error, MD_ERROR_FILE_READ, 1, 1, filepath);
         return -1;
     }
@@ -654,7 +653,7 @@ int md_parser_parse_file(md_parser_t *parser, const char *filepath, md_document_
     char *content = (char *)malloc(size + 1);
     if (!content) {
         fclose(fp);
-        parser->parse_error = 1;
+        parser->parse_error = true;
         md_error_set(&parser->error, MD_ERROR_MEMORY, 1, 1, NULL);
         return -1;
     }

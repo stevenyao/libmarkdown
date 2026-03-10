@@ -4,28 +4,29 @@
 #include "export.h"
 #include "ast.h"
 #include "error.h"
+#include <stdbool.h>
 #include <stdio.h>
 
 typedef struct md_parser_options {
-    int parse_yaml_front_matter;
-    int parse_footnotes;
-    int parse_table;
-    int parse_task_list;
-    int parse_strikethrough;
-    int parse_autolink;
-    int parse_html;
+    bool parse_yaml_front_matter;
+    bool parse_footnotes;
+    bool parse_table;
+    bool parse_task_list;
+    bool parse_strikethrough;
+    bool parse_autolink;
+    bool parse_html;
     size_t max_nesting;
 } md_parser_options_t;
 
 #define MD_PARSER_OPTIONS_DEFAULT { \
-    .parse_yaml_front_matter = 0,  \
-    .parse_footnotes = 0,            \
-    .parse_table = 1,               \
-    .parse_task_list = 1,           \
-    .parse_strikethrough = 1,       \
-    .parse_autolink = 1,            \
-    .parse_html = 1,                \
-    .max_nesting = 16               \
+    .parse_yaml_front_matter = false, \
+    .parse_footnotes = false,         \
+    .parse_table = true,              \
+    .parse_task_list = true,          \
+    .parse_strikethrough = true,      \
+    .parse_autolink = true,           \
+    .parse_html = true,               \
+    .max_nesting = 16                 \
 }
 
 typedef struct md_parser md_parser_t;
