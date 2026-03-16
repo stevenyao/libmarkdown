@@ -134,6 +134,36 @@ TEST(ast_null_operations) {
     md_node_free(NULL);
 }
 
+TEST(ast_node_free_all_types) {
+    // Fenced code block with info string and language
+    md_node_t *fenced = (md_node_t *)calloc(1, sizeof(md_node_t));
+    fenced->type = MD_NODE_FENCED_CODE;
+    fenced->data.block.language = strdup("c");
+    fenced->data.block.info_string = strdup("info");
+    md_node_free(fenced);
+
+    // Indented code block with raw_html
+    md_node_t *indented = (md_node_t *)calloc(1, sizeof(md_node_t));
+    indented->type = MD_NODE_INDENTED_CODE;
+    indented->data.block.raw_html = strdup("<html>");
+    md_node_free(indented);
+
+    // Link with url and title
+    md_node_t *link = (md_node_t *)calloc(1, sizeof(md_node_t));
+    link->type = MD_NODE_LINK;
+    link->data.inline_.url = strdup("http://example.com");
+    link->data.inline_.title = strdup("title");
+    md_node_free(link);
+
+    // Image with url, title, and alt
+    md_node_t *image = (md_node_t *)calloc(1, sizeof(md_node_t));
+    image->type = MD_NODE_IMAGE;
+    image->data.inline_.url = strdup("img.png");
+    image->data.inline_.title = strdup("img title");
+    image->data.inline_.alt = strdup("alt text");
+    md_node_free(image);
+}
+
 /* ==================== Parser Tests ==================== */
 
 TEST(parser_create_destroy) {
@@ -1559,6 +1589,54 @@ TEST(document_getters) {
     md_document_free(doc);
 }
 
+TEST(document_node_getters_edge_cases) {
+    // Empty emphasis
+    md_node_t emph = {0};
+    emph.type = MD_NODE_EMPHASIS;
+    ASSERT_EQ_INT(1, md_node_get_emphasis_level(&emph), "emph level 1");
+    
+    md_node_t strong = {0};
+    strong.type = MD_NODE_STRONG;
+    ASSERT_EQ_INT(2, md_node_get_emphasis_level(&strong), "strong level 2");
+
+    md_node_t strong_emph = {0};
+    strong_emph.type = MD_NODE_STRONG_EMPHASIS;
+    ASSERT_EQ_INT(3, md_node_get_emphasis_level(&strong_emph), "strong emph level 3");
+    
+    // Emphasis on non-emphasis node
+    md_node_t para = {0};
+    para.type = MD_NODE_PARAGRAPH;
+    ASSERT_EQ_INT(0, md_node_get_emphasis_level(&para), "para level 0");
+    ASSERT_EQ_INT(0, md_node_get_emphasis_level(NULL), "null emph level");
+    
+    // Title and alt
+    md_node_t link = {0};
+    link.type = MD_NODE_LINK;
+    link.data.inline_.title = "My Link";
+    ASSERT_EQ_STR("My Link", md_node_get_title(&link), "link title");
+    ASSERT_EQ_STR(NULL, md_node_get_title(&para), "para title null");
+    
+    md_node_t image = {0};
+    image.type = MD_NODE_IMAGE;
+    image.data.inline_.alt = "My Alt";
+    ASSERT_EQ_STR("My Alt", md_node_get_alt(&image), "image alt");
+    ASSERT_EQ_STR(NULL, md_node_get_alt(&para), "para alt null");
+
+    // Code lang on indented code
+    md_node_t ind_code = {0};
+    ind_code.type = MD_NODE_INDENTED_CODE;
+    ind_code.data.block.language = "c++";
+    ASSERT_EQ_STR("c++", md_node_get_code_language(&ind_code), "indented code lang");
+    
+    // is_task_list edge case
+    md_node_t list = {0};
+    list.type = MD_NODE_LIST;
+    list.data.block.list_type = MD_LIST_TASK;
+    ASSERT_EQ_INT(1, md_node_is_task_list(&list), "list is task list");
+    list.data.block.list_type = MD_LIST_UNORDERED;
+    ASSERT_EQ_INT(0, md_node_is_task_list(&list), "list is not task list");
+}
+
 TEST(table_extraction_manual) {
     // Construct AST manually to test extractor fully
     md_document_t *doc = (md_document_t *)calloc(1, sizeof(md_document_t));
@@ -1704,6 +1782,7 @@ int main(void) {
     RUN_TEST(ast_node_operations);
     RUN_TEST(ast_node_free_with_content);
     RUN_TEST(ast_null_operations);
+    RUN_TEST(ast_node_free_all_types);
     
     printf("\n--- Parser Tests ---\n");
     RUN_TEST(parser_create_destroy);
@@ -1802,6 +1881,7 @@ int main(void) {
     
     printf("\n--- Coverage Tests ---\n");
     RUN_TEST(document_getters);
+    RUN_TEST(document_node_getters_edge_cases);
     RUN_TEST(table_extraction_manual);
     RUN_TEST(image_getter);
     RUN_TEST(parser_inline_edge_cases);
